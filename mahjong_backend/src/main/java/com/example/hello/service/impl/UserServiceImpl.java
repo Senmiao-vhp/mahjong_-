@@ -3,10 +3,12 @@ package com.example.hello.service.impl;
 import com.example.hello.common.JwtUtil;
 import com.example.hello.entity.User;
 import com.example.hello.entity.UserDTO;
+import com.example.hello.exception.BusinessException;
 import com.example.hello.mapper.UserMapper;
 import com.example.hello.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -22,6 +24,7 @@ public class UserServiceImpl implements UserService {
     private JwtUtil jwtUtil;
 
     @Override
+    @Transactional
     public UserDTO createGuestUser() {
         // 创建游客用户
         User user = new User();
@@ -43,6 +46,12 @@ public class UserServiceImpl implements UserService {
 
         // 更新数据库中的昵称
         userMapper.updateLastLoginTime(user);
+        
+        // 再次查询确保数据已写入
+        User savedUser = userMapper.findById(user.getId());
+        if (savedUser == null) {
+            throw new BusinessException(500, "创建游客账号失败，请重试");
+        }
 
         // 生成JWT令牌
         String token = jwtUtil.generateToken(user);
@@ -114,6 +123,22 @@ public class UserServiceImpl implements UserService {
         userDTO.setNickname(user.getNickname());
         userDTO.setToken(token);
 
+        return userDTO;
+    }
+
+    @Override
+    public UserDTO getUserInfo(Long id) {
+        // 查询用户
+        User user = userMapper.findById(id);
+        if (user == null || !Objects.equals(user.getStatus(), 1)) {
+            return null;
+        }
+
+        // 构建返回对象
+        UserDTO userDTO = new UserDTO();
+        userDTO.setId(user.getId());
+        userDTO.setNickname(user.getNickname());
+        
         return userDTO;
     }
 }

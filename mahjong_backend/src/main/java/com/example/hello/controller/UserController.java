@@ -84,4 +84,16 @@ public class UserController {
 
         return Result.success(userDTO);
     }
+
+    /**
+     * 获取用户信息
+     */
+    @GetMapping("/{id}")
+    public Result<UserDTO> getUserInfo(@PathVariable Long id) {
+        UserDTO userDTO = userService.getUserInfo(id);
+        if (userDTO == null) {
+            return Result.error(404, "用户不存在或已被禁用");
+        }
+        return Result.success(userDTO);
+    }
 }

@@ -24,4 +24,9 @@ public interface UserService {
      * 用户登录
      */
     UserDTO login(Long id);
+
+    /**
+     * 获取用户信息
+     */
+    UserDTO getUserInfo(Long id);
 }
