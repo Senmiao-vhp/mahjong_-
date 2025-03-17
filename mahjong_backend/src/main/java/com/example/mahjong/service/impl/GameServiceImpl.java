@@ -9,8 +9,13 @@ import com.example.mahjong.entity.PlayerGame;
 import com.example.mahjong.mapper.GameMapper;
 import com.example.mahjong.mapper.PlayerGameMapper;
 import com.example.mahjong.service.GameService;
+import com.example.mahjong.entity.Wind;
+import com.example.mahjong.entity.GameState;
+import com.example.mahjong.entity.Tile;
+import com.example.mahjong.entity.TileType;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class GameServiceImpl implements GameService {
@@ -27,17 +32,17 @@ public class GameServiceImpl implements GameService {
         // 创建新游戏
         Game game = new Game();
         game.setRoomId(roomId);
-        game.setRoundWind(0); // 东风
+        game.setRoundWind(Wind.EAST); // 东风
         game.setDealerPosition(0); // 东家为庄
         game.setCurrentPosition(0); // 从东家开始
         game.setHonbaCount(0);
-        game.setRiichiStickCount(0);
+        game.setRiichiSticks(0);
         
         // 初始化牌山和宝牌指示牌
         initializeWallAndDora(game);
         
         game.setWallPosition(14); // 从第14张牌开始摸牌
-        game.setStatus(0); // 准备中
+        game.setStatus(GameState.READY); // 准备中
         game.setStartTime(new Date());
         game.setCreateTime(new Date());
         game.setUpdateTime(new Date());
@@ -77,7 +82,7 @@ public class GameServiceImpl implements GameService {
         result.put("dealer_position", game.getDealerPosition());
         result.put("current_position", game.getCurrentPosition());
         result.put("honba_count", game.getHonbaCount());
-        result.put("riichi_stick_count", game.getRiichiStickCount());
+        result.put("riichi_stick_count", game.getRiichiSticks());
         
         // 获取宝牌指示牌
         List<String> doraIndicators = parseDoraIndicators(game.getDoraIndicators());
@@ -200,39 +205,58 @@ public class GameServiceImpl implements GameService {
     }
     
     /**
-     * 初始化牌山和宝牌指示牌
+     * 解析宝牌指示牌
      */
-    private void initializeWallAndDora(Game game) {
-        // 这里应该实现洗牌和牌山初始化的逻辑
-        // 暂时使用随机字符串模拟
-        StringBuilder wallTiles = new StringBuilder();
-        String[] tileTypes = {"m", "p", "s", "z"};
-        Random random = new Random();
-        
-        for (int i = 0; i < 136; i++) {
-            int number = random.nextInt(9) + 1;
-            if (number > 7 && tileTypes[i % 4].equals("z")) {
-                number = 7; // 字牌只有1-7
-            }
-            wallTiles.append(number).append(tileTypes[i % 4]).append(",");
-        }
-        
-        game.setWallTiles(wallTiles.toString());
-        
-        // 设置宝牌指示牌
-        game.setDoraIndicators("5m");
-        game.setUraDoraIndicators("3p");
-        game.setKanDoraIndicators("");
-    }
-    
-    /**
-     * 解析宝牌指示牌字符串
-     */
-    private List<String> parseDoraIndicators(String doraIndicators) {
+    private List<String> parseDoraIndicators(List<Tile> doraIndicators) {
         if (doraIndicators == null || doraIndicators.isEmpty()) {
             return new ArrayList<>();
         }
-        return Arrays.asList(doraIndicators.split(","));
+        return doraIndicators.stream()
+                .map(Tile::getName)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 初始化牌山和宝牌指示牌
+     */
+    private void initializeWallAndDora(Game game) {
+        // 创建所有牌
+        List<Tile> allTiles = new ArrayList<>();
+        String[] tileTypes = {"m", "p", "s", "z"};
+        Random random = new Random();
+        
+        // 数牌
+        for (int i = 0; i < 3; i++) { // m, p, s
+            for (int number = 1; number <= 9; number++) {
+                for (int j = 0; j < 4; j++) {
+                    allTiles.add(new Tile(TileType.values()[i], number));
+                }
+            }
+        }
+        
+        // 字牌
+        for (int number = 1; number <= 7; number++) {
+            for (int j = 0; j < 4; j++) {
+                allTiles.add(new Tile(TileType.HONOR, number));
+            }
+        }
+        
+        // 洗牌
+        Collections.shuffle(allTiles, random);
+        
+        // 设置牌山
+        game.setWallTiles(allTiles);
+        
+        // 设置宝牌指示牌
+        List<Tile> doraIndicators = new ArrayList<>();
+        doraIndicators.add(new Tile(TileType.MANZU, 5));
+        game.setDoraIndicators(doraIndicators);
+        
+        List<Tile> uraDoraIndicators = new ArrayList<>();
+        uraDoraIndicators.add(new Tile(TileType.PINZU, 3));
+        game.setUraDoraIndicators(uraDoraIndicators);
+        
+        game.setKanDoraIndicators(new ArrayList<>());
     }
 
     @Override
@@ -274,7 +298,7 @@ public class GameServiceImpl implements GameService {
         if (isRiichi) {
             playerGame.setIsRiichi(true);
             playerGame.setScore(playerGame.getScore() - 1000); // 立直需要支付1000点
-            game.setRiichiStickCount(game.getRiichiStickCount() + 1);
+            game.setRiichiSticks(game.getRiichiSticks() + 1);
             
             playerGameMapper.updateById(playerGame);
         }
@@ -359,13 +383,13 @@ public class GameServiceImpl implements GameService {
                 break;
             case "ron":
                 // 荣和后游戏结束
-                game.setStatus(2); // 已结束
+                game.setStatus(GameState.FINISHED); // 已结束
                 game.setEndTime(new Date());
                 actionResult = "荣和成功，游戏结束";
                 break;
             case "tsumo":
                 // 自摸后游戏结束
-                game.setStatus(2); // 已结束
+                game.setStatus(GameState.FINISHED); // 已结束
                 game.setEndTime(new Date());
                 actionResult = "自摸成功，游戏结束";
                 break;
@@ -402,7 +426,7 @@ public class GameServiceImpl implements GameService {
         
         // 获取游戏信息
         Game game = gameMapper.selectById(gameId);
-        if (game == null || game.getStatus() != 2) { // 只有已结束的游戏才有结算信息
+        if (game == null || game.getStatus() != GameState.FINISHED) { // 只有已结束的游戏才有结算信息
             return null;
         }
         
@@ -413,7 +437,7 @@ public class GameServiceImpl implements GameService {
         result.put("settlement_type", 0); // 0-和牌，1-流局
         result.put("settlement_time", game.getEndTime());
         result.put("honba_count", game.getHonbaCount());
-        result.put("riichi_stick_count", game.getRiichiStickCount());
+        result.put("riichi_stick_count", game.getRiichiSticks());
         
         // 设置玩家结算信息
         List<Map<String, Object>> players = new ArrayList<>();
@@ -484,58 +508,56 @@ public class GameServiceImpl implements GameService {
     }
 
     @Override
-    public Map<String, Object> getGameLogs(Long gameId, int page, int pageSize) {
-        Map<String, Object> result = new HashMap<>();
-        
+    public List<Map<String, Object>> getGameLogs(Long gameId, int page, int pageSize) {
         // 获取游戏信息
         Game game = gameMapper.selectById(gameId);
         if (game == null) {
             return null;
         }
         
-        // 这里应该从数据库中获取操作日志
-        // 由于我们没有实现日志表，这里模拟一些数据
-        
-        // 设置总记录数
-        result.put("total", 30);
-        
-        // 生成日志列表
-        List<Map<String, Object>> logs = new ArrayList<>();
-        
-        // 模拟一些操作日志
-        for (int i = 1; i <= 3; i++) {
-            Map<String, Object> log = new HashMap<>();
-            log.put("id", i);
-            
-            if (i == 1) {
-                log.put("position", 0);
-                log.put("action_type", 0); // 摸牌
-                Map<String, Object> actionData = new HashMap<>();
-                actionData.put("tile", "4m");
-                log.put("action_data", actionData);
-                log.put("action_time", new Date(System.currentTimeMillis() - 50000));
-            } else if (i == 2) {
-                log.put("position", 0);
-                log.put("action_type", 1); // 打牌
-                Map<String, Object> actionData = new HashMap<>();
-                actionData.put("tile", "1p");
-                actionData.put("is_tsumogiri", false);
-                log.put("action_data", actionData);
-                log.put("action_time", new Date(System.currentTimeMillis() - 45000));
-            } else if (i == 3) {
-                log.put("position", 1);
-                log.put("action_type", 0); // 摸牌
-                Map<String, Object> actionData = new HashMap<>();
-                actionData.put("tile", "7s");
-                log.put("action_data", actionData);
-                log.put("action_time", new Date(System.currentTimeMillis() - 40000));
-            }
-            
-            logs.add(log);
+        // 获取玩家信息
+        List<PlayerGame> playerGames = playerGameMapper.selectByGameId(gameId);
+        if (playerGames == null || playerGames.isEmpty()) {
+            return null;
         }
         
-        result.put("list", logs);
+        // 构建日志列表
+        List<Map<String, Object>> logs = new ArrayList<>();
         
-        return result;
+        // 添加游戏开始日志
+        Map<String, Object> startLog = new HashMap<>();
+        startLog.put("type", "game_start");
+        startLog.put("time", game.getStartTime());
+        startLog.put("players", playerGames.stream()
+                .map(pg -> {
+                    Map<String, Object> player = new HashMap<>();
+                    player.put("user_id", pg.getUserId());
+                    player.put("seat_wind", pg.getSeatWind());
+                    player.put("is_dealer", pg.getIsDealer());
+                    return player;
+                })
+                .collect(Collectors.toList()));
+        logs.add(startLog);
+        
+        // 添加游戏结束日志
+        if (game.getEndTime() != null) {
+            Map<String, Object> endLog = new HashMap<>();
+            endLog.put("type", "game_end");
+            endLog.put("time", game.getEndTime());
+            endLog.put("players", playerGames.stream()
+                    .map(pg -> {
+                        Map<String, Object> player = new HashMap<>();
+                        player.put("user_id", pg.getUserId());
+                        player.put("score", pg.getScore());
+                        return player;
+                    })
+                    .collect(Collectors.toList()));
+            logs.add(endLog);
+        }
+        
+        // 分页处理
+        int start = (page - 1) * pageSize;
+        int end = Math.min(start + pageSize, logs.size());
+        return logs.subList(start, end);
     }
 } 
