@@ -13,6 +13,8 @@ import com.example.mahjong.entity.Wind;
 import com.example.mahjong.entity.GameState;
 import com.example.mahjong.entity.Tile;
 import com.example.mahjong.entity.TileType;
+import com.example.mahjong.websocket.GameWebSocketHandler;
+import com.example.mahjong.service.GameLogicService;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -25,6 +27,12 @@ public class GameServiceImpl implements GameService {
 
     @Autowired
     private PlayerGameMapper playerGameMapper;
+
+    @Autowired
+    private GameWebSocketHandler webSocketHandler;
+
+    @Autowired
+    private GameLogicService gameLogicService;
 
     @Override
     @Transactional
@@ -332,6 +340,13 @@ public class GameServiceImpl implements GameService {
         
         result.put("available_actions", availableActions);
         
+        // 广播游戏状态更新
+        webSocketHandler.broadcastGameState(gameId, result);
+        
+        // 广播玩家手牌更新
+        Map<String, Object> handInfo = getPlayerHand(gameId, userId);
+        webSocketHandler.broadcastPlayerHand(gameId, userId, handInfo);
+        
         return result;
     }
 
@@ -352,14 +367,15 @@ public class GameServiceImpl implements GameService {
             return null;
         }
         
-        // 这里应该实现各种操作的逻辑，包括：
-        // 1. 吃：从牌河获取上家打出的牌，与手牌组成顺子
-        // 2. 碰：从牌河获取任何玩家打出的牌，与手牌组成刻子
-        // 3. 杠：明杠、暗杠、加杠的处理
-        // 4. 和：荣和、自摸的判定和得分计算
-        // 5. 跳过：不进行任何操作
-        
-        // 由于我们没有实现完整的游戏逻辑，这里简化处理
+        // 检查振听状态
+        if (gameLogicService.isFuriten(playerGame, game)) {
+            // 振听状态下只能自摸，不能荣和
+            if (actionType.equals("ron")) {
+                result.put("code", 400);
+                result.put("msg", "振听状态下不能荣和");
+                return result;
+            }
+        }
         
         // 根据操作类型更新游戏状态
         String actionResult = "";
@@ -367,17 +383,23 @@ public class GameServiceImpl implements GameService {
         
         switch (actionType) {
             case "chi":
-                // 吃牌后轮到该玩家打牌
+                // 吃牌后轮到该玩家打牌，解除振听状态
+                playerGame.setIsFuriten(false);
+                playerGame.setIsTemporaryFuriten(false);
                 nextPosition = playerGame.getPosition();
                 actionResult = "吃成功，请打出一张牌";
                 break;
             case "pon":
-                // 碰牌后轮到该玩家打牌
+                // 碰牌后轮到该玩家打牌，解除振听状态
+                playerGame.setIsFuriten(false);
+                playerGame.setIsTemporaryFuriten(false);
                 nextPosition = playerGame.getPosition();
                 actionResult = "碰成功，请打出一张牌";
                 break;
             case "kan":
-                // 杠牌后需要摸一张牌，仍然轮到该玩家
+                // 杠牌后需要摸一张牌，仍然轮到该玩家，解除振听状态
+                playerGame.setIsFuriten(false);
+                playerGame.setIsTemporaryFuriten(false);
                 nextPosition = playerGame.getPosition();
                 actionResult = "杠成功，请打出一张牌";
                 break;
@@ -404,11 +426,20 @@ public class GameServiceImpl implements GameService {
         game.setUpdateTime(new Date());
         gameMapper.updateById(game);
         
-        // 记录操作日志（实际应该保存到数据库）
+        // 更新玩家状态
+        playerGameMapper.updateById(playerGame);
         
         // 构建返回结果
         result.put("next_position", nextPosition);
         result.put("action_result", actionResult);
+        result.put("is_furiten", playerGame.getIsFuriten());
+        result.put("is_temporary_furiten", playerGame.getIsTemporaryFuriten());
+        
+        // 广播游戏状态更新
+        webSocketHandler.broadcastGameState(gameId, result);
+        
+        // 广播玩家手牌更新
+        webSocketHandler.broadcastPlayerHand(gameId, userId, getPlayerHand(gameId, userId));
         
         return result;
     }
@@ -416,8 +447,16 @@ public class GameServiceImpl implements GameService {
     @Override
     @Transactional
     public Map<String, Object> riichi(Long gameId, Long userId, String tile) {
-        // 立直实际上是一种特殊的打牌操作，可以调用discardTile方法
-        return discardTile(gameId, userId, tile, true);
+        Map<String, Object> result = discardTile(gameId, userId, tile, true);
+        
+        // 广播游戏状态更新
+        webSocketHandler.broadcastGameState(gameId, result);
+        
+        // 广播玩家手牌更新
+        Map<String, Object> handInfo = getPlayerHand(gameId, userId);
+        webSocketHandler.broadcastPlayerHand(gameId, userId, handInfo);
+        
+        return result;
     }
 
     @Override
@@ -504,6 +543,9 @@ public class GameServiceImpl implements GameService {
             result.put("winning_hands", winningHands);
         }
         
+        // 广播游戏结算信息
+        webSocketHandler.broadcastGameSettlement(gameId, result);
+        
         return result;
     }
 
@@ -558,6 +600,15 @@ public class GameServiceImpl implements GameService {
         // 分页处理
         int start = (page - 1) * pageSize;
         int end = Math.min(start + pageSize, logs.size());
-        return logs.subList(start, end);
+        List<Map<String, Object>> subLogs = logs.subList(start, end);
+        
+        // 广播游戏日志
+        Map<String, Object> logData = new HashMap<>();
+        logData.put("logs", subLogs);
+        logData.put("page", page);
+        logData.put("page_size", pageSize);
+        webSocketHandler.broadcastGameLog(gameId, logData);
+        
+        return subLogs;
     }
 } 

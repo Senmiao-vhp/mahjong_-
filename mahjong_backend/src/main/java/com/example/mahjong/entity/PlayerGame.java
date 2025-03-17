@@ -72,6 +72,11 @@ public class PlayerGame implements Serializable {
     private Boolean isMenzen;
     
     /**
+     * 是否第一巡
+     */
+    private Boolean isFirstTurn;
+    
+    /**
      * 自风
      */
     private Wind seatWind;
@@ -105,6 +110,7 @@ public class PlayerGame implements Serializable {
         this.isFuriten = false;
         this.isTemporaryFuriten = false;
         this.isMenzen = true;
+        this.isFirstTurn = true;
     }
     
     /**
@@ -276,6 +282,20 @@ public class PlayerGame implements Serializable {
     }
     
     /**
+     * 获取是否第一巡
+     */
+    public Boolean getIsFirstTurn() {
+        return isFirstTurn;
+    }
+    
+    /**
+     * 设置是否第一巡
+     */
+    public void setIsFirstTurn(Boolean firstTurn) {
+        isFirstTurn = firstTurn;
+    }
+    
+    /**
      * 获取自风
      */
     public Wind getSeatWind() {
@@ -385,5 +405,6 @@ public class PlayerGame implements Serializable {
         isFuriten = false;
         isTemporaryFuriten = false;
         isMenzen = true;
+        isFirstTurn = true;
     }
 } 
