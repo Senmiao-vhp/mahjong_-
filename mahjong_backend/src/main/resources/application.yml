@@ -16,7 +16,7 @@ spring:
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
-  type-aliases-package: com.example.hello.entity
+  type-aliases-package: com.example.mahjong.entity
   configuration:
     map-underscore-to-camel-case: true
 

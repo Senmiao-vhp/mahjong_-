@@ -1,0 +1,50 @@
+"filename", "language", "vue", "HTML", "CSS", "TypeScript", "JSON", "JSON with Comments", "Markdown", "MS SQL", "YAML", "XML", "Java", "comment", "blank", "total"
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\README.md", "Markdown", 0, 0, 0, 0, 0, 0, 49, 0, 0, 0, 0, 0, 20, 69
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\pom.xml", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 100, 0, 19, 10, 129
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\MahjongApplication.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 0, 3, 16
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\common\JwtAuthInterceptor.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 68, 12, 15, 95
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\common\JwtUtil.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 93, 19, 28, 140
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\common\Result.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 0, 4, 25
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\config\JwtConfig.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 0, 7, 28
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\config\WebConfig.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 27, 2, 9, 38
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\controller\AuthController.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 127, 28, 42, 197
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\controller\GameController.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 206, 49, 72, 327
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\controller\HelloController.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 0, 3, 13
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\controller\RoomController.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 225, 50, 72, 347
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\entity\Game.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 23, 0, 2, 25
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\entity\PlayerGame.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20, 0, 2, 22
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\entity\Room.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 18, 0, 2, 20
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\entity\RoomDTO.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 18, 0, 2, 20
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\entity\User.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 2, 14
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\entity\UserDTO.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 8, 0, 2, 10
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\exception\GlobalExceptionHandler.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 21, 7, 5, 33
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\mapper\GameMapper.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 23, 12, 7, 42
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\mapper\PlayerGameMapper.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 29, 18, 10, 57
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\mapper\RoomMapper.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 30, 15, 9, 54
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\mapper\UserMapper.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 16, 12, 7, 35
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\service\GameService.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 19, 36, 15, 70
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\service\RoomService.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 14, 21, 10, 45
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\service\UserService.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 13, 24, 10, 47
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\service\impl\GameServiceImpl.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 365, 78, 98, 541
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\service\impl\RoomServiceImpl.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 142, 26, 44, 212
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\service\impl\UserServiceImpl.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 97, 17, 30, 144
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\resources\application.yml", "YAML", 0, 0, 0, 0, 0, 0, 0, 0, 22, 0, 0, 0, 3, 25
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\resources\init.sql", "MS SQL", 0, 0, 0, 0, 0, 0, 0, 204, 0, 0, 0, 1, 17, 222
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\resources\test_data.sql", "MS SQL", 0, 0, 0, 0, 0, 0, 0, 93, 0, 0, 0, 15, 14, 122
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\test\java\com\example\hello\HelloApplicationTest.java", "Java", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 2, 5
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\README.md", "Markdown", 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 3, 6
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\index.html", "HTML", 0, 13, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 14
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\package-lock.json", "JSON", 0, 0, 0, 0, 1361, 0, 0, 0, 0, 0, 0, 0, 1, 1362
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\package.json", "JSON", 0, 0, 0, 0, 21, 0, 0, 0, 0, 0, 0, 0, 1, 22
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\public\vite.svg", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\src\App.vue", "vue", 28, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 31
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\src\assets\vue.svg", "XML", 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\src\components\HelloWorld.vue", "vue", 35, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7, 42
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\src\main.ts", "TypeScript", 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 2, 6
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\src\style.css", "CSS", 0, 0, 70, 0, 0, 0, 0, 0, 0, 0, 0, 0, 10, 80
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\src\vite-env.d.ts", "TypeScript", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 2
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\tsconfig.app.json", "JSON", 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0, 1, 2, 15
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\tsconfig.json", "JSON with Comments", 0, 0, 0, 0, 0, 7, 0, 0, 0, 0, 0, 0, 1, 8
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\tsconfig.node.json", "JSON", 0, 0, 0, 0, 20, 0, 0, 0, 0, 0, 0, 2, 3, 25
+"d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\vite.config.ts", "TypeScript", 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 1, 2, 8
+"Total", "-", 63, 13, 70, 9, 1414, 7, 52, 297, 22, 102, 1682, 466, 615, 4812
