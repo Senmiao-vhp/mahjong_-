@@ -4,33 +4,45 @@ import com.example.mahjong.entity.*;
 import com.example.mahjong.service.GameService;
 import com.example.mahjong.service.GameLogicService;
 import com.example.mahjong.service.AIService;
+import com.example.mahjong.service.GameWebSocketService;
 import com.example.mahjong.mapper.GameMapper;
 import com.example.mahjong.mapper.PlayerGameMapper;
-import com.example.mahjong.websocket.GameWebSocketHandler;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 @Service
 public class GameServiceImpl implements GameService {
 
+    private static final Logger logger = Logger.getLogger(GameServiceImpl.class.getName());
+    
+    private final GameMapper gameMapper;
+    private final PlayerGameMapper playerGameMapper;
+    private final GameWebSocketService webSocketService;
+    private final GameLogicService gameLogicService;
+    private final AIService aiService;
+    private final ObjectMapper objectMapper;
+    
     @Autowired
-    private GameMapper gameMapper;
-
-    @Autowired
-    private PlayerGameMapper playerGameMapper;
-
-    @Autowired
-    private GameWebSocketHandler webSocketHandler;
-
-    @Autowired
-    private GameLogicService gameLogicService;
-
-    @Autowired
-    private AIService aiService;
+    public GameServiceImpl(GameMapper gameMapper,
+                         PlayerGameMapper playerGameMapper,
+                         GameWebSocketService webSocketService,
+                         GameLogicService gameLogicService,
+                         AIService aiService,
+                         ObjectMapper objectMapper) {
+        this.gameMapper = gameMapper;
+        this.playerGameMapper = playerGameMapper;
+        this.webSocketService = webSocketService;
+        this.gameLogicService = gameLogicService;
+        this.aiService = aiService;
+        this.objectMapper = objectMapper;
+        logger.info("GameServiceImpl初始化完成");
+    }
 
     @Override
     @Transactional
@@ -161,28 +173,65 @@ public class GameServiceImpl implements GameService {
             return null;
         }
         
-        // 这里需要从另一个表获取玩家手牌信息
-        // 暂时模拟一些数据
-        List<String> tiles = Arrays.asList("1m", "1m", "2m", "3m", "4m", "5m", "6p", "7p", "8p", "1s", "2s", "3s");
-        result.put("tiles", tiles);
-        
-        String drawnTile = "4s";
-        result.put("drawn_tile", drawnTile);
-        
-        // 计算听牌
-        List<String> tenpaiTiles = Arrays.asList("5m", "9p");
-        result.put("tenpai_tiles", tenpaiTiles);
-        
-        // 获取副露信息
-        List<Map<String, Object>> melds = new ArrayList<>();
-        // 暂时模拟一个碰的数据
-        Map<String, Object> meld = new HashMap<>();
-        meld.put("type", 1); // 碰
-        meld.put("tiles", Arrays.asList("7s", "7s", "7s"));
-        meld.put("from", 2); // 来自西家
-        melds.add(meld);
-        
-        result.put("melds", melds);
+        try {
+            // 从hand表获取玩家手牌
+            String handTilesJson = playerGameMapper.getPlayerHandTiles(gameId, userId);
+            if (handTilesJson != null && !handTilesJson.isEmpty()) {
+                List<Tile> handTiles = objectMapper.readValue(handTilesJson, 
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, Tile.class));
+                
+                // 转换为前端需要的格式
+                List<String> tileStrings = handTiles.stream()
+                    .map(Tile::toString)
+                    .collect(Collectors.toList());
+                
+                result.put("tiles", tileStrings);
+                
+                // 计算听牌
+                // 注意：这里假设GameLogicService有一个方法可以计算听牌
+                // 如果没有，需要实现或使用其他方式
+                List<String> waitingTileStrings = new ArrayList<>();
+                try {
+                    // 尝试使用gameLogicService计算听牌
+                    waitingTileStrings = gameLogicService.getPossibleWaitingTiles(playerGame)
+                        .stream()
+                        .map(Tile::toString)
+                        .collect(Collectors.toList());
+                } catch (Exception e) {
+                    logger.warning("计算听牌失败: " + e.getMessage());
+                }
+                
+                result.put("tenpai_tiles", waitingTileStrings);
+            } else {
+                result.put("tiles", new ArrayList<>());
+                result.put("tenpai_tiles", new ArrayList<>());
+            }
+            
+            // 获取副露信息
+            List<String> meldJsons = playerGameMapper.getPlayerMelds(gameId, userId);
+            List<Map<String, Object>> melds = new ArrayList<>();
+            
+            if (meldJsons != null && !meldJsons.isEmpty()) {
+                for (String meldJson : meldJsons) {
+                    Meld meld = objectMapper.readValue(meldJson, Meld.class);
+                    Map<String, Object> meldMap = new HashMap<>();
+                    meldMap.put("type", meld.getType().ordinal());
+                    meldMap.put("tiles", meld.getTiles().stream()
+                        .map(Tile::toString)
+                        .collect(Collectors.toList()));
+                    meldMap.put("from", meld.getFromPlayer());
+                    melds.add(meldMap);
+                }
+            }
+            
+            result.put("melds", melds);
+            
+        } catch (Exception e) {
+            logger.severe("获取玩家手牌失败: " + e.getMessage());
+            result.put("tiles", new ArrayList<>());
+            result.put("tenpai_tiles", new ArrayList<>());
+            result.put("melds", new ArrayList<>());
+        }
         
         return result;
     }
@@ -275,89 +324,100 @@ public class GameServiceImpl implements GameService {
             Map<String, Object> gameState = new HashMap<>();
             gameState.put("status", "timeout");
             gameState.put("message", "玩家操作超时，自动跳过");
-            webSocketHandler.broadcastGameState(game.getId(), gameState);
+            webSocketService.broadcastGameState(game.getId(), gameState);
         }
     }
 
     @Override
     @Transactional
-    public Map<String, Object> discardTile(Long gameId, Long userId, String tile, boolean isRiichi) {
-        Game game = getGameById(gameId);
-        if (game == null) {
-            return null;
-        }
-        
-        // 检查是否超时
-        checkAndHandleTimeout(game);
-        
-        // 检查是否是当前玩家的回合
-        PlayerGame player = game.getCurrentPlayer();
-        if (player == null || !player.getUserId().equals(userId)) {
-            return null;
-        }
-        
-        // 清除等待操作状态
-        game.clearWaitingForAction();
-        
+    public Map<String, Object> discardTile(Long gameId, Long userId, String tileStr, boolean isRiichi) {
         Map<String, Object> result = new HashMap<>();
         
-        // 这里应该实现打牌的逻辑，包括：
-        // 1. 从玩家手牌中移除打出的牌
-        // 2. 添加到牌河
-        // 3. 如果立直，更新玩家状态和立直棒数
-        // 4. 计算其他玩家可用的操作（吃/碰/杠/和）
-        // 5. 更新游戏状态
+        // 检查游戏是否存在
+        Game game = gameMapper.selectById(gameId);
+        if (game == null) {
+            result.put("success", false);
+            result.put("message", "游戏不存在");
+            return result;
+        }
         
-        // 由于我们没有实现完整的游戏逻辑，这里简化处理
+        // 检查是否是当前玩家的回合
+        PlayerGame player = playerGameMapper.selectByGameIdAndUserId(gameId, userId);
+        if (player == null || !player.getPosition().equals(game.getCurrentPosition())) {
+            result.put("success", false);
+            result.put("message", "不是当前玩家的回合");
+            return result;
+        }
         
-        // 更新当前行动位置（轮到下一个玩家）
-        int nextPosition = (game.getCurrentPosition() + 1) % 4;
-        game.setCurrentPosition(nextPosition);
+        // 检查操作超时
+        checkAndHandleTimeout(game);
         
-        // 如果立直，更新玩家状态和立直棒数
-        if (isRiichi) {
-            player.setIsRiichi(true);
-            player.setScore(player.getScore() - 1000); // 立直需要支付1000点
-            game.setRiichiSticks(game.getRiichiSticks() + 1);
+        try {
+            // 将字符串转换为Tile对象
+            Tile tile = Tile.fromString(tileStr);
             
-            playerGameMapper.updateById(player);
+            // 从玩家手牌中移除这张牌
+            String handTilesJson = playerGameMapper.getPlayerHandTiles(gameId, userId);
+            List<Tile> handTiles = objectMapper.readValue(handTilesJson, 
+                objectMapper.getTypeFactory().constructCollectionType(List.class, Tile.class));
+            
+            if (!handTiles.contains(tile)) {
+                result.put("success", false);
+                result.put("message", "玩家手牌中没有这张牌");
+                return result;
+            }
+            
+            handTiles.remove(tile);
+            
+            // 更新玩家手牌
+            playerGameMapper.updatePlayerHandTiles(gameId, userId, 
+                objectMapper.writeValueAsString(handTiles));
+            
+            // 添加到玩家牌河
+            String discardTilesJson = playerGameMapper.getPlayerDiscardTiles(gameId, userId);
+            List<Tile> discardTiles;
+            
+            if (discardTilesJson != null && !discardTilesJson.isEmpty()) {
+                discardTiles = objectMapper.readValue(discardTilesJson, 
+                    objectMapper.getTypeFactory().constructCollectionType(List.class, Tile.class));
+            } else {
+                discardTiles = new ArrayList<>();
+            }
+            
+            discardTiles.add(tile);
+            
+            // 更新玩家牌河
+            playerGameMapper.updatePlayerDiscardTiles(gameId, userId, 
+                objectMapper.writeValueAsString(discardTiles));
+            
+            // 如果是立直，更新玩家状态
+            if (isRiichi) {
+                player.setIsRiichi(true);
+                playerGameMapper.updateById(player);
+                
+                // 增加立直棒
+                game.incrementRiichiSticks();
+                gameMapper.updateById(game);
+            }
+            
+            // 更新游戏状态
+            game.setCurrentPosition((game.getCurrentPosition() + 1) % 4); // 轮到下一个玩家
+            game.updateLastActionTime(); // 更新最后操作时间
+            gameMapper.updateById(game);
+            
+            // 广播游戏状态更新
+            Map<String, Object> gameState = getGameDetails(gameId);
+            webSocketService.broadcastGameState(gameId, gameState);
+            
+            // 返回成功结果
+            result.put("success", true);
+            result.put("message", "打牌成功");
+            
+        } catch (Exception e) {
+            logger.severe("打牌失败: " + e.getMessage());
+            result.put("success", false);
+            result.put("message", "打牌失败: " + e.getMessage());
         }
-        
-        game.setUpdateTime(new Date());
-        gameMapper.updateById(game);
-        
-        // 记录操作日志（实际应该保存到数据库）
-        
-        // 构建返回结果
-        result.put("next_position", nextPosition);
-        
-        // 模拟其他玩家可用的操作
-        List<Map<String, Object>> availableActions = new ArrayList<>();
-        
-        // 假设下家可以吃
-        if (nextPosition == 1) {
-            Map<String, Object> action = new HashMap<>();
-            action.put("position", 1);
-            action.put("actions", Arrays.asList("chi"));
-            availableActions.add(action);
-        }
-        
-        // 假设对家可以碰
-        if (nextPosition != 2) {
-            Map<String, Object> action = new HashMap<>();
-            action.put("position", 2);
-            action.put("actions", Arrays.asList("pon"));
-            availableActions.add(action);
-        }
-        
-        result.put("available_actions", availableActions);
-        
-        // 广播游戏状态更新
-        webSocketHandler.broadcastGameState(gameId, result);
-        
-        // 广播玩家手牌更新
-        Map<String, Object> handInfo = getPlayerHand(gameId, userId);
-        webSocketHandler.broadcastPlayerHand(gameId, userId, handInfo);
         
         return result;
     }
@@ -411,7 +471,7 @@ public class GameServiceImpl implements GameService {
         gameMapper.updateById(game);
         
         // 广播游戏状态
-        webSocketHandler.broadcastGameState(gameId, result);
+        webSocketService.broadcastGameState(gameId, result);
         
         return result;
     }
@@ -422,11 +482,11 @@ public class GameServiceImpl implements GameService {
         Map<String, Object> result = discardTile(gameId, userId, tile, true);
         
         // 广播游戏状态更新
-        webSocketHandler.broadcastGameState(gameId, result);
+        webSocketService.broadcastGameState(gameId, result);
         
         // 广播玩家手牌更新
         Map<String, Object> handInfo = getPlayerHand(gameId, userId);
-        webSocketHandler.broadcastPlayerHand(gameId, userId, handInfo);
+        webSocketService.broadcastPlayerHand(gameId, userId, handInfo);
         
         return result;
     }
@@ -516,7 +576,7 @@ public class GameServiceImpl implements GameService {
         }
         
         // 广播游戏结算信息
-        webSocketHandler.broadcastGameSettlement(gameId, result);
+        webSocketService.broadcastGameSettlement(gameId, result);
         
         return result;
     }
@@ -579,7 +639,7 @@ public class GameServiceImpl implements GameService {
         logData.put("logs", subLogs);
         logData.put("page", page);
         logData.put("page_size", pageSize);
-        webSocketHandler.broadcastGameLog(gameId, logData);
+        webSocketService.broadcastGameLog(gameId, logData);
         
         return subLogs;
     }

@@ -1066,4 +1066,39 @@ public class GameLogicService {
 
         return types.size() == 1 && hasHonorTile;
     }
+
+    /**
+     * 计算玩家可能的听牌
+     * 
+     * @param player 玩家
+     * @return 可能的听牌列表
+     */
+    public List<Tile> getPossibleWaitingTiles(PlayerGame player) {
+        List<Tile> result = new ArrayList<>();
+        
+        // 获取玩家手牌和副露
+        List<Tile> handTiles = player.getHandTiles();
+        List<Meld> melds = player.getMelds();
+        
+        if (handTiles == null || handTiles.isEmpty()) {
+            return result;
+        }
+        
+        // 遍历所有可能的牌
+        for (TileType type : TileType.values()) {
+            for (int number = 1; number <= type.getMaxNumber(); number++) {
+                Tile tile = new Tile(type, number);
+                
+                // 添加这张牌后检查是否能和牌
+                List<Tile> testHand = new ArrayList<>(handTiles);
+                testHand.add(tile);
+                
+                if (canWin(testHand, melds)) {
+                    result.add(tile);
+                }
+            }
+        }
+        
+        return result;
+    }
 } 

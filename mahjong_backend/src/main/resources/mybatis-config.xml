@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE configuration
+        PUBLIC "-//mybatis.org//DTD Config 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-config.dtd">
+<configuration>
+    <!-- 设置 -->
+    <settings>
+        <!-- 开启驼峰命名自动映射 -->
+        <setting name="mapUnderscoreToCamelCase" value="true"/>
+        <!-- 日志实现 -->
+        <setting name="logImpl" value="STDOUT_LOGGING"/>
+        <!-- 允许JDBC生成主键 -->
+        <setting name="useGeneratedKeys" value="true"/>
+        <!-- 使用列标签替换列别名 -->
+        <setting name="useColumnLabel" value="true"/>
+        <!-- 开启延迟加载 -->
+        <setting name="lazyLoadingEnabled" value="true"/>
+        <!-- 设置积极的懒加载 -->
+        <setting name="aggressiveLazyLoading" value="false"/>
+    </settings>
+    
+    <!-- 类型处理器 -->
+    <typeHandlers>
+        <!-- 使用通用JsonTypeHandler处理复杂类型 -->
+        <typeHandler handler="com.example.mahjong.config.JsonTypeHandler" 
+                     javaType="java.util.List" 
+                     jdbcType="VARCHAR"/>
+                     
+        <!-- 处理枚举类型 -->
+        <typeHandler handler="org.apache.ibatis.type.EnumTypeHandler" 
+                     javaType="com.example.mahjong.entity.GameState" 
+                     jdbcType="VARCHAR"/>
+                     
+        <typeHandler handler="org.apache.ibatis.type.EnumTypeHandler" 
+                     javaType="com.example.mahjong.entity.Wind" 
+                     jdbcType="VARCHAR"/>
+                     
+        <typeHandler handler="org.apache.ibatis.type.EnumTypeHandler" 
+                     javaType="com.example.mahjong.entity.TileType" 
+                     jdbcType="VARCHAR"/>
+                     
+        <typeHandler handler="org.apache.ibatis.type.EnumTypeHandler" 
+                     javaType="com.example.mahjong.entity.MeldType" 
+                     jdbcType="VARCHAR"/>
+                     
+        <typeHandler handler="org.apache.ibatis.type.EnumTypeHandler" 
+                     javaType="com.example.mahjong.entity.ActionType" 
+                     jdbcType="VARCHAR"/>
+    </typeHandlers>
+</configuration> 

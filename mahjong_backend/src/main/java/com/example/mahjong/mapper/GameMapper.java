@@ -8,8 +8,14 @@ import java.util.List;
 @Mapper
 public interface GameMapper {
     
-    @Insert("INSERT INTO game (room_id, state, current_player_id, round_wind, honba, riichi_sticks) " +
-            "VALUES (#{roomId}, #{state}, #{currentPlayerId}, #{roundWind}, #{honba}, #{riichiSticks})")
+    @Insert("INSERT INTO game (room_id, status, round_wind, dealer_position, current_position, " +
+            "honba_count, riichi_stick_count, wall_tiles, dora_indicators, ura_dora_indicators, " +
+            "kan_dora_indicators, wall_position) " +
+            "VALUES (#{roomId}, #{status}, #{roundWind}, #{dealerPosition}, #{currentPosition}, " +
+            "#{honbaCount}, #{riichiSticks}, " +
+            "#{wallTiles,jdbcType=VARCHAR}, #{doraIndicators,jdbcType=VARCHAR}, " +
+            "#{uraDoraIndicators,jdbcType=VARCHAR}, #{kanDoraIndicators,jdbcType=VARCHAR}, " +
+            "#{wallPosition})")
     @Options(useGeneratedKeys = true, keyProperty = "id")
     void insert(Game game);
     
@@ -19,13 +25,16 @@ public interface GameMapper {
     @Select("SELECT * FROM game WHERE room_id = #{roomId}")
     List<Game> selectByRoomId(Long roomId);
     
-    @Update("UPDATE game SET state = #{state}, current_player_id = #{currentPlayerId}, " +
-            "round_wind = #{roundWind}, honba = #{honba}, riichi_sticks = #{riichiSticks}, " +
+    @Update("UPDATE game SET status = #{status}, round_wind = #{roundWind}, " +
+            "honba_count = #{honbaCount}, riichi_stick_count = #{riichiSticks}, " +
             "dealer_position = #{dealerPosition}, current_position = #{currentPosition}, " +
-            "wall_position = #{wallPosition}, wall_tiles = #{wallTiles}, " +
-            "dora_indicators = #{doraIndicators}, ura_dora_indicators = #{uraDoraIndicators}, " +
-            "kan_dora_indicators = #{kanDoraIndicators}, start_time = #{startTime}, " +
-            "end_time = #{endTime} WHERE id = #{id}")
+            "wall_position = #{wallPosition}, " +
+            "wall_tiles = #{wallTiles,jdbcType=VARCHAR}, " +
+            "dora_indicators = #{doraIndicators,jdbcType=VARCHAR}, " +
+            "ura_dora_indicators = #{uraDoraIndicators,jdbcType=VARCHAR}, " +
+            "kan_dora_indicators = #{kanDoraIndicators,jdbcType=VARCHAR}, " +
+            "start_time = #{startTime}, end_time = #{endTime}, update_time = NOW() " +
+            "WHERE id = #{id}")
     void updateById(Game game);
     
     @Delete("DELETE FROM game WHERE id = #{id}")
