@@ -1,20 +1,15 @@
 package com.example.mahjong.service.impl;
 
+import com.example.mahjong.entity.*;
+import com.example.mahjong.service.GameService;
+import com.example.mahjong.service.GameLogicService;
+import com.example.mahjong.service.AIService;
+import com.example.mahjong.mapper.GameMapper;
+import com.example.mahjong.mapper.PlayerGameMapper;
+import com.example.mahjong.websocket.GameWebSocketHandler;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import com.example.mahjong.entity.Game;
-import com.example.mahjong.entity.PlayerGame;
-import com.example.mahjong.mapper.GameMapper;
-import com.example.mahjong.mapper.PlayerGameMapper;
-import com.example.mahjong.service.GameService;
-import com.example.mahjong.entity.Wind;
-import com.example.mahjong.entity.GameState;
-import com.example.mahjong.entity.Tile;
-import com.example.mahjong.entity.TileType;
-import com.example.mahjong.websocket.GameWebSocketHandler;
-import com.example.mahjong.service.GameLogicService;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -34,6 +29,9 @@ public class GameServiceImpl implements GameService {
     @Autowired
     private GameLogicService gameLogicService;
 
+    @Autowired
+    private AIService aiService;
+
     @Override
     @Transactional
     public Game createGame(Long roomId) {
@@ -47,15 +45,48 @@ public class GameServiceImpl implements GameService {
         game.setRiichiSticks(0);
         
         // 初始化牌山和宝牌指示牌
-        initializeWallAndDora(game);
+        game.initializeWall();
         
-        game.setWallPosition(14); // 从第14张牌开始摸牌
         game.setStatus(GameState.READY); // 准备中
         game.setStartTime(new Date());
         game.setCreateTime(new Date());
         game.setUpdateTime(new Date());
         
+        // 保存游戏
         gameMapper.insert(game);
+        
+        return game;
+    }
+
+    @Transactional
+    public Game createGame(Long roomId, Long userId, GameConfig config) {
+        // 创建新游戏
+        Game game = createGame(roomId);
+        
+        // 设置AI相关配置
+        if (config != null && config.getIsAIGame()) {
+            game.setIsAIGame(true);
+            game.setAiDifficultyLevel(config.getAiDifficultyLevel());
+            
+            // 初始化AI玩家
+            List<AIPlayer> aiPlayers = new ArrayList<>();
+            for (int i = 0; i < config.getAiPlayerCount(); i++) {
+                AIPlayer aiPlayer = new AIPlayer();
+                aiPlayer.setGameId(game.getId());
+                aiPlayer.setPosition(i + 1); // 从1号位开始
+                aiPlayer.setIsDealer(false);
+                aiPlayer.setDifficultyLevel(config.getAiDifficultyLevel());
+                aiPlayers.add(aiPlayer);
+                
+                // 初始化AI玩家
+                aiService.initializeAIPlayer(aiPlayer, game);
+            }
+            game.setAiPlayers(aiPlayers);
+        }
+        
+        // 更新游戏
+        gameMapper.updateById(game);
+        
         return game;
     }
 
@@ -225,69 +256,50 @@ public class GameServiceImpl implements GameService {
     }
 
     /**
-     * 初始化牌山和宝牌指示牌
+     * 检查并处理操作超时
      */
-    private void initializeWallAndDora(Game game) {
-        // 创建所有牌
-        List<Tile> allTiles = new ArrayList<>();
-        String[] tileTypes = {"m", "p", "s", "z"};
-        Random random = new Random();
-        
-        // 数牌
-        for (int i = 0; i < 3; i++) { // m, p, s
-            for (int number = 1; number <= 9; number++) {
-                for (int j = 0; j < 4; j++) {
-                    allTiles.add(new Tile(TileType.values()[i], number));
-                }
+    private void checkAndHandleTimeout(Game game) {
+        if (game.isActionTimeout()) {
+            // 获取当前玩家
+            PlayerGame currentPlayer = game.getCurrentPlayer();
+            
+            // 如果是AI玩家，执行AI操作
+            if (isAIPlayer(game, currentPlayer.getUserId())) {
+                performAIAction(game, currentPlayer.getUserId(), "skip");
+            } else {
+                // 如果是真实玩家，自动跳过
+                handleSkipAction(game, currentPlayer, new HashMap<>());
             }
+            
+            // 广播游戏状态更新
+            Map<String, Object> gameState = new HashMap<>();
+            gameState.put("status", "timeout");
+            gameState.put("message", "玩家操作超时，自动跳过");
+            webSocketHandler.broadcastGameState(game.getId(), gameState);
         }
-        
-        // 字牌
-        for (int number = 1; number <= 7; number++) {
-            for (int j = 0; j < 4; j++) {
-                allTiles.add(new Tile(TileType.HONOR, number));
-            }
-        }
-        
-        // 洗牌
-        Collections.shuffle(allTiles, random);
-        
-        // 设置牌山
-        game.setWallTiles(allTiles);
-        
-        // 设置宝牌指示牌
-        List<Tile> doraIndicators = new ArrayList<>();
-        doraIndicators.add(new Tile(TileType.MANZU, 5));
-        game.setDoraIndicators(doraIndicators);
-        
-        List<Tile> uraDoraIndicators = new ArrayList<>();
-        uraDoraIndicators.add(new Tile(TileType.PINZU, 3));
-        game.setUraDoraIndicators(uraDoraIndicators);
-        
-        game.setKanDoraIndicators(new ArrayList<>());
     }
 
     @Override
     @Transactional
     public Map<String, Object> discardTile(Long gameId, Long userId, String tile, boolean isRiichi) {
-        Map<String, Object> result = new HashMap<>();
-        
-        // 获取游戏信息
-        Game game = gameMapper.selectById(gameId);
+        Game game = getGameById(gameId);
         if (game == null) {
             return null;
         }
         
-        // 获取玩家在游戏中的信息
-        PlayerGame playerGame = playerGameMapper.selectByGameIdAndUserId(gameId, userId);
-        if (playerGame == null) {
+        // 检查是否超时
+        checkAndHandleTimeout(game);
+        
+        // 检查是否是当前玩家的回合
+        PlayerGame player = game.getCurrentPlayer();
+        if (player == null || !player.getUserId().equals(userId)) {
             return null;
         }
         
-        // 检查是否轮到该玩家行动
-        if (!playerGame.getPosition().equals(game.getCurrentPosition())) {
-            return null;
-        }
+        // 清除等待操作状态
+        game.clearWaitingForAction();
+        
+        Map<String, Object> result = new HashMap<>();
         
         // 这里应该实现打牌的逻辑，包括：
         // 1. 从玩家手牌中移除打出的牌
@@ -304,11 +316,11 @@ public class GameServiceImpl implements GameService {
         
         // 如果立直，更新玩家状态和立直棒数
         if (isRiichi) {
-            playerGame.setIsRiichi(true);
-            playerGame.setScore(playerGame.getScore() - 1000); // 立直需要支付1000点
+            player.setIsRiichi(true);
+            player.setScore(player.getScore() - 1000); // 立直需要支付1000点
             game.setRiichiSticks(game.getRiichiSticks() + 1);
             
-            playerGameMapper.updateById(playerGame);
+            playerGameMapper.updateById(player);
         }
         
         game.setUpdateTime(new Date());
@@ -353,93 +365,53 @@ public class GameServiceImpl implements GameService {
     @Override
     @Transactional
     public Map<String, Object> performAction(Long gameId, Long userId, String actionType, List<String> tiles) {
-        Map<String, Object> result = new HashMap<>();
-        
-        // 获取游戏信息
-        Game game = gameMapper.selectById(gameId);
+        Game game = getGameById(gameId);
         if (game == null) {
             return null;
         }
         
-        // 获取玩家在游戏中的信息
-        PlayerGame playerGame = playerGameMapper.selectByGameIdAndUserId(gameId, userId);
-        if (playerGame == null) {
+        // 检查是否超时
+        checkAndHandleTimeout(game);
+        
+        // 检查是否是当前玩家的回合
+        PlayerGame player = game.getCurrentPlayer();
+        if (player == null || !player.getUserId().equals(userId)) {
             return null;
         }
         
-        // 检查振听状态
-        if (gameLogicService.isFuriten(playerGame, game)) {
-            // 振听状态下只能自摸，不能荣和
-            if (actionType.equals("ron")) {
-                result.put("code", 400);
-                result.put("msg", "振听状态下不能荣和");
-                return result;
-            }
-        }
+        // 清除等待操作状态
+        game.clearWaitingForAction();
         
-        // 根据操作类型更新游戏状态
-        String actionResult = "";
-        int nextPosition = game.getCurrentPosition();
-        
+        // 处理玩家操作
+        Map<String, Object> result = new HashMap<>();
         switch (actionType) {
             case "chi":
-                // 吃牌后轮到该玩家打牌，解除振听状态
-                playerGame.setIsFuriten(false);
-                playerGame.setIsTemporaryFuriten(false);
-                nextPosition = playerGame.getPosition();
-                actionResult = "吃成功，请打出一张牌";
+                handleChiAction(game, player, tiles, result);
                 break;
             case "pon":
-                // 碰牌后轮到该玩家打牌，解除振听状态
-                playerGame.setIsFuriten(false);
-                playerGame.setIsTemporaryFuriten(false);
-                nextPosition = playerGame.getPosition();
-                actionResult = "碰成功，请打出一张牌";
+                handlePonAction(game, player, tiles, result);
                 break;
             case "kan":
-                // 杠牌后需要摸一张牌，仍然轮到该玩家，解除振听状态
-                playerGame.setIsFuriten(false);
-                playerGame.setIsTemporaryFuriten(false);
-                nextPosition = playerGame.getPosition();
-                actionResult = "杠成功，请打出一张牌";
+                handleKanAction(game, player, tiles, result);
                 break;
             case "ron":
-                // 荣和后游戏结束
-                game.setStatus(GameState.FINISHED); // 已结束
-                game.setEndTime(new Date());
-                actionResult = "荣和成功，游戏结束";
+                handleRonAction(game, player, tiles, result);
                 break;
             case "tsumo":
-                // 自摸后游戏结束
-                game.setStatus(GameState.FINISHED); // 已结束
-                game.setEndTime(new Date());
-                actionResult = "自摸成功，游戏结束";
+                handleTsumoAction(game, player, result);
                 break;
             case "skip":
-                // 跳过操作，轮到下一个玩家
-                nextPosition = (game.getCurrentPosition() + 1) % 4;
-                actionResult = "跳过操作";
+                handleSkipAction(game, player, result);
                 break;
+            default:
+                return null;
         }
         
-        game.setCurrentPosition(nextPosition);
-        game.setUpdateTime(new Date());
+        // 更新游戏状态
         gameMapper.updateById(game);
         
-        // 更新玩家状态
-        playerGameMapper.updateById(playerGame);
-        
-        // 构建返回结果
-        result.put("next_position", nextPosition);
-        result.put("action_result", actionResult);
-        result.put("is_furiten", playerGame.getIsFuriten());
-        result.put("is_temporary_furiten", playerGame.getIsTemporaryFuriten());
-        
-        // 广播游戏状态更新
+        // 广播游戏状态
         webSocketHandler.broadcastGameState(gameId, result);
-        
-        // 广播玩家手牌更新
-        webSocketHandler.broadcastPlayerHand(gameId, userId, getPlayerHand(gameId, userId));
         
         return result;
     }
@@ -610,5 +582,236 @@ public class GameServiceImpl implements GameService {
         webSocketHandler.broadcastGameLog(gameId, logData);
         
         return subLogs;
+    }
+
+    /**
+     * 执行AI行动
+     */
+    private Map<String, Object> performAIAction(Game game, Long userId, String actionType) {
+        Map<String, Object> result = new HashMap<>();
+        AIPlayer aiPlayer = getAIPlayer(game, userId);
+        
+        if (aiPlayer == null) {
+            throw new RuntimeException("AI player not found");
+        }
+        
+        switch (actionType) {
+            case "discard":
+                // AI决定打出一张牌
+                Tile discardTile = aiService.decideDiscard(aiPlayer, game);
+                if (discardTile != null) {
+                    return discardTile(game.getId(), userId, discardTile.toString(), false);
+                }
+                break;
+                
+            case "riichi":
+                // AI决定是否立直
+                if (aiService.decideRiichi(aiPlayer, game)) {
+                    Tile riichiTile = aiService.decideDiscard(aiPlayer, game);
+                    if (riichiTile != null) {
+                        return riichi(game.getId(), userId, riichiTile.toString());
+                    }
+                }
+                break;
+                
+            case "chi":
+            case "pon":
+            case "kan":
+                // AI决定是否副露
+                PlayerGame currentPlayer = game.getCurrentPlayer();
+                if (currentPlayer != null && !currentPlayer.getId().equals(userId)) {
+                    Tile lastDiscard = currentPlayer.getDiscardTiles().get(currentPlayer.getDiscardTiles().size() - 1);
+                    Meld meld = aiService.decideMeld(aiPlayer, game, lastDiscard);
+                    if (meld != null) {
+                        List<String> tiles = meld.getTiles().stream()
+                                .map(Tile::toString)
+                                .collect(Collectors.toList());
+                        return performAction(game.getId(), userId, actionType, tiles);
+                    }
+                }
+                break;
+                
+            case "ron":
+                // AI决定是否荣和
+                PlayerGame lastPlayer = game.getCurrentPlayer();
+                if (lastPlayer != null && !lastPlayer.getId().equals(userId)) {
+                    Tile lastDiscard = lastPlayer.getDiscardTiles().get(lastPlayer.getDiscardTiles().size() - 1);
+                    if (aiService.decideRon(aiPlayer, game, lastDiscard)) {
+                        List<String> tiles = Collections.singletonList(lastDiscard.toString());
+                        return performAction(game.getId(), userId, "ron", tiles);
+                    }
+                }
+                break;
+                
+            case "tsumo":
+                // AI决定是否自摸
+                if (aiService.decideTsumo(aiPlayer, game)) {
+                    return performAction(game.getId(), userId, "tsumo", Collections.emptyList());
+                }
+                break;
+        }
+        
+        // 如果AI没有执行任何行动，则跳过
+        return performAction(game.getId(), userId, "skip", Collections.emptyList());
+    }
+
+    /**
+     * 判断是否是AI玩家
+     */
+    private boolean isAIPlayer(Game game, Long userId) {
+        if (!game.getIsAIGame()) {
+            return false;
+        }
+        return game.getAiPlayers().stream()
+                .anyMatch(ai -> ai.getId().equals(userId));
+    }
+
+    /**
+     * 获取AI玩家
+     */
+    private AIPlayer getAIPlayer(Game game, Long userId) {
+        if (!game.getIsAIGame()) {
+            return null;
+        }
+        return game.getAiPlayers().stream()
+                .filter(ai -> ai.getId().equals(userId))
+                .findFirst()
+                .orElse(null);
+    }
+
+    private void handleChiAction(Game game, PlayerGame player, List<String> tiles, Map<String, Object> result) {
+        // 吃牌后轮到该玩家打牌，解除振听状态
+        player.setIsFuriten(false);
+        player.setIsTemporaryFuriten(false);
+        game.setCurrentPosition(player.getPosition());
+
+        // 创建吃牌副露
+        List<Tile> meldTiles = tiles.stream()
+                .map(Tile::fromString)
+                .collect(Collectors.toList());
+        Meld meld = new Meld(MeldType.CHI, meldTiles, true, (Long)null);
+        player.getMelds().add(meld);
+
+        // 从手牌中移除用于吃牌的牌
+        for (Tile tile : meldTiles) {
+            if (!tile.equals(game.getLastDiscardedTile())) {
+                player.getHandTiles().remove(tile);
+            }
+        }
+
+        result.put("success", true);
+        result.put("message", "吃成功，请打出一张牌");
+    }
+
+    private void handlePonAction(Game game, PlayerGame player, List<String> tiles, Map<String, Object> result) {
+        // 碰牌后轮到该玩家打牌，解除振听状态
+        player.setIsFuriten(false);
+        player.setIsTemporaryFuriten(false);
+        game.setCurrentPosition(player.getPosition());
+
+        // 创建碰牌副露
+        List<Tile> meldTiles = tiles.stream()
+                .map(Tile::fromString)
+                .collect(Collectors.toList());
+        Meld meld = new Meld(MeldType.PON, meldTiles, true, (Long)null);
+        player.getMelds().add(meld);
+
+        // 从手牌中移除用于碰牌的牌
+        for (Tile tile : meldTiles) {
+            if (!tile.equals(game.getLastDiscardedTile())) {
+                player.getHandTiles().remove(tile);
+            }
+        }
+
+        result.put("success", true);
+        result.put("message", "碰成功，请打出一张牌");
+    }
+
+    private void handleKanAction(Game game, PlayerGame player, List<String> tiles, Map<String, Object> result) {
+        // 杠牌后需要摸一张牌，仍然轮到该玩家，解除振听状态
+        player.setIsFuriten(false);
+        player.setIsTemporaryFuriten(false);
+        game.setCurrentPosition(player.getPosition());
+
+        // 创建杠牌副露
+        List<Tile> meldTiles = tiles.stream()
+                .map(Tile::fromString)
+                .collect(Collectors.toList());
+        Meld meld = new Meld(MeldType.KAN, meldTiles, true, (Long)null);
+        player.getMelds().add(meld);
+
+        // 从手牌中移除用于杠牌的牌
+        for (Tile tile : meldTiles) {
+            if (!tile.equals(game.getLastDiscardedTile())) {
+                player.getHandTiles().remove(tile);
+            }
+        }
+
+        // 补牌
+        Tile replacementTile = game.drawTile();
+        player.getHandTiles().add(replacementTile);
+
+        result.put("success", true);
+        result.put("message", "杠成功，请打出一张牌");
+    }
+
+    private void handleRonAction(Game game, PlayerGame player, List<String> tiles, Map<String, Object> result) {
+        // 荣和后游戏结束
+        game.setStatus(GameState.FINISHED);
+        game.setEndTime(new Date());
+
+        // 计算和牌分数
+        List<Yaku> yakus = gameLogicService.calculateYaku(player, game);
+        int basePoints = 30; // 基本符数
+        boolean isDealer = player.getIsDealer();
+        boolean isTsumo = false;
+        int score = gameLogicService.calculateScore(yakus, basePoints, isDealer, isTsumo);
+
+        // 更新玩家分数
+        PlayerGame lastPlayer = game.getCurrentPlayer();
+        if (lastPlayer != null) {
+            lastPlayer.setScore(lastPlayer.getScore() - score);
+        }
+        player.setScore(player.getScore() + score);
+
+        result.put("success", true);
+        result.put("message", "荣和成功，游戏结束");
+        result.put("score", score);
+        result.put("yakus", yakus);
+    }
+
+    private void handleTsumoAction(Game game, PlayerGame player, Map<String, Object> result) {
+        // 自摸后游戏结束
+        game.setStatus(GameState.FINISHED);
+        game.setEndTime(new Date());
+
+        // 计算和牌分数
+        List<Yaku> yakus = gameLogicService.calculateYaku(player, game);
+        int basePoints = 30; // 基本符数
+        boolean isDealer = player.getIsDealer();
+        boolean isTsumo = true;
+        int score = gameLogicService.calculateScore(yakus, basePoints, isDealer, isTsumo);
+
+        // 更新所有玩家分数
+        for (PlayerGame p : game.getPlayers()) {
+            if (p.getId().equals(player.getId())) {
+                p.setScore(p.getScore() + score * 3);
+            } else {
+                p.setScore(p.getScore() - score);
+            }
+        }
+
+        result.put("success", true);
+        result.put("message", "自摸成功，游戏结束");
+        result.put("score", score);
+        result.put("yakus", yakus);
+    }
+
+    private void handleSkipAction(Game game, PlayerGame player, Map<String, Object> result) {
+        // 跳过操作，轮到下一个玩家
+        game.setCurrentPosition((game.getCurrentPosition() + 1) % 4);
+        
+        result.put("success", true);
+        result.put("message", "跳过操作");
     }
 } 

@@ -7,7 +7,7 @@ public enum MeldType {
     /**
      * 顺子（吃）
      */
-    CHII("吃"),
+    CHI("吃"),
     
     /**
      * 刻子（碰）
@@ -17,20 +17,25 @@ public enum MeldType {
     /**
      * 杠子（杠）
      */
-    KAN("杠");
+    KAN("杠"),
+    
+    /**
+     * 暗杠
+     */
+    ANKAN("暗杠");
     
     /**
      * 显示名称
      */
-    private final String displayName;
+    private final String name;
     
     /**
      * 构造函数
      * 
-     * @param displayName 显示名称
+     * @param name 显示名称
      */
-    MeldType(String displayName) {
-        this.displayName = displayName;
+    MeldType(String name) {
+        this.name = name;
     }
     
     /**
@@ -38,8 +43,7 @@ public enum MeldType {
      * 
      * @return 显示名称
      */
-    @Override
-    public String toString() {
-        return displayName;
+    public String getName() {
+        return name;
     }
 } 

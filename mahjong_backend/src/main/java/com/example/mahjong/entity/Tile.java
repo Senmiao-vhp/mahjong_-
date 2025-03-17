@@ -155,4 +155,37 @@ public class Tile implements Serializable {
     public String toString() {
         return getName();
     }
+    
+    public static Tile fromString(String tileStr) {
+        if (tileStr == null || tileStr.length() < 2) {
+            throw new IllegalArgumentException("Invalid tile string: " + tileStr);
+        }
+
+        char typeChar = tileStr.charAt(tileStr.length() - 1);
+        String numberStr = tileStr.substring(0, tileStr.length() - 1);
+        int number = Integer.parseInt(numberStr);
+
+        TileType type;
+        switch (typeChar) {
+            case 'm':
+                type = TileType.MANZU;
+                break;
+            case 'p':
+                type = TileType.PINZU;
+                break;
+            case 's':
+                type = TileType.SOUZU;
+                break;
+            case 'w':
+                type = TileType.WIND;
+                break;
+            case 'd':
+                type = TileType.DRAGON;
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid tile type: " + typeChar);
+        }
+
+        return new Tile(type, number);
+    }
 } 

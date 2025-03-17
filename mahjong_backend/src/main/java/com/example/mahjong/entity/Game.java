@@ -15,6 +15,21 @@ public class Game implements Serializable {
     private static final long serialVersionUID = 1L;
     
     /**
+     * 操作超时时间（毫秒）
+     */
+    private static final long ACTION_TIMEOUT = 15000;
+    
+    /**
+     * 最后操作时间
+     */
+    private Date lastActionTime;
+    
+    /**
+     * 是否正在等待玩家操作
+     */
+    private Boolean isWaitingForAction;
+    
+    /**
      * ID
      */
     private Long id;
@@ -103,6 +118,21 @@ public class Game implements Serializable {
      * 更新时间
      */
     private Date updateTime;
+    
+    /**
+     * 是否AI局
+     */
+    private Boolean isAIGame;
+    
+    /**
+     * AI难度等级（1-3）
+     */
+    private Integer aiDifficultyLevel;
+    
+    /**
+     * AI玩家列表
+     */
+    private List<AIPlayer> aiPlayers;
     
     /**
      * 默认构造函数
@@ -371,6 +401,48 @@ public class Game implements Serializable {
     }
     
     /**
+     * 获取是否AI局
+     */
+    public Boolean getIsAIGame() {
+        return isAIGame;
+    }
+    
+    /**
+     * 设置是否AI局
+     */
+    public void setIsAIGame(Boolean aiGame) {
+        isAIGame = aiGame;
+    }
+    
+    /**
+     * 获取AI难度等级
+     */
+    public Integer getAiDifficultyLevel() {
+        return aiDifficultyLevel;
+    }
+    
+    /**
+     * 设置AI难度等级
+     */
+    public void setAiDifficultyLevel(Integer aiDifficultyLevel) {
+        this.aiDifficultyLevel = aiDifficultyLevel;
+    }
+    
+    /**
+     * 获取AI玩家列表
+     */
+    public List<AIPlayer> getAiPlayers() {
+        return aiPlayers;
+    }
+    
+    /**
+     * 设置AI玩家列表
+     */
+    public void setAiPlayers(List<AIPlayer> aiPlayers) {
+        this.aiPlayers = aiPlayers;
+    }
+    
+    /**
      * 初始化牌山
      */
     public void initializeWall() {
@@ -579,5 +651,114 @@ public class Game implements Serializable {
         for (PlayerGame player : players) {
             player.reset();
         }
+    }
+    
+    /**
+     * 获取所有弃牌
+     */
+    public List<Tile> getDiscardedTiles() {
+        List<Tile> discardedTiles = new ArrayList<>();
+        for (PlayerGame player : players) {
+            discardedTiles.addAll(player.getDiscardTiles());
+        }
+        return discardedTiles;
+    }
+    
+    /**
+     * 获取当前回合的弃牌
+     */
+    public List<Tile> getCurrentTurnDiscards() {
+        List<Tile> currentTurnDiscards = new ArrayList<>();
+        for (PlayerGame player : players) {
+            if (player.getPosition() != currentPosition) {
+                List<Tile> discards = player.getDiscardTiles();
+                if (!discards.isEmpty()) {
+                    currentTurnDiscards.add(discards.get(discards.size() - 1));
+                }
+            }
+        }
+        return currentTurnDiscards;
+    }
+
+    public Tile getLastDiscardedTile() {
+        if (players == null || players.isEmpty()) {
+            return null;
+        }
+
+        // 获取当前玩家的上一家
+        int previousPosition = (currentPosition + 3) % 4;
+        PlayerGame previousPlayer = players.stream()
+                .filter(p -> p.getPosition() == previousPosition)
+                .findFirst()
+                .orElse(null);
+
+        if (previousPlayer == null || previousPlayer.getDiscardTiles() == null || 
+            previousPlayer.getDiscardTiles().isEmpty()) {
+            return null;
+        }
+
+        // 返回上一家最后打出的牌
+        return previousPlayer.getDiscardTiles().get(previousPlayer.getDiscardTiles().size() - 1);
+    }
+
+    public Tile drawTile() {
+        if (wallTiles.isEmpty()) {
+            throw new IllegalStateException("No tiles left in wall");
+        }
+        return wallTiles.remove(wallTiles.size() - 1);
+    }
+
+    /**
+     * 获取最后操作时间
+     */
+    public Date getLastActionTime() {
+        return lastActionTime;
+    }
+    
+    /**
+     * 设置最后操作时间
+     */
+    public void setLastActionTime(Date lastActionTime) {
+        this.lastActionTime = lastActionTime;
+    }
+    
+    /**
+     * 获取是否正在等待玩家操作
+     */
+    public Boolean getIsWaitingForAction() {
+        return isWaitingForAction;
+    }
+    
+    /**
+     * 设置是否正在等待玩家操作
+     */
+    public void setIsWaitingForAction(Boolean waitingForAction) {
+        isWaitingForAction = waitingForAction;
+    }
+    
+    /**
+     * 检查是否操作超时
+     */
+    public boolean isActionTimeout() {
+        if (!isWaitingForAction || lastActionTime == null) {
+            return false;
+        }
+        return System.currentTimeMillis() - lastActionTime.getTime() > ACTION_TIMEOUT;
+    }
+    
+    /**
+     * 更新最后操作时间
+     */
+    public void updateLastActionTime() {
+        this.lastActionTime = new Date();
+        this.isWaitingForAction = true;
+    }
+    
+    /**
+     * 清除等待操作状态
+     */
+    public void clearWaitingForAction() {
+        this.isWaitingForAction = false;
+        this.lastActionTime = null;
     }
 } 

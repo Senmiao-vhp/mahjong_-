@@ -12,25 +12,17 @@ public class GameLogicService {
      * 判断是否可以和牌
      */
     public boolean canWin(List<Tile> handTiles, List<Meld> melds) {
-        // 复制手牌列表，避免修改原始数据
-        List<Tile> tiles = new ArrayList<>(handTiles);
-        
-        // 添加副露的牌
-        for (Meld meld : melds) {
-            tiles.addAll(meld.getTiles());
+        if (handTiles == null || handTiles.isEmpty()) {
+            return false;
         }
-        
-        // 检查特殊和牌型
-        if (isSevenPairs(tiles)) {
+
+        // 检查特殊和牌
+        if (isSevenPairs(handTiles) || isThirteenOrphans(handTiles)) {
             return true;
         }
-        
-        if (isThirteenOrphans(tiles)) {
-            return true;
-        }
-        
-        // 检查普通和牌型
-        return checkNormalWin(tiles);
+
+        // 检查标准和牌
+        return isStandardWin(handTiles, melds);
     }
     
     /**
@@ -78,8 +70,11 @@ public class GameLogicService {
         }
         
         // 添加字牌
-        for (int i = 1; i <= 7; i++) {
-            requiredTiles.add(new Tile(TileType.HONOR, i));
+        for (int i = 1; i <= 4; i++) {
+            requiredTiles.add(new Tile(TileType.WIND, i));
+        }
+        for (int i = 1; i <= 3; i++) {
+            requiredTiles.add(new Tile(TileType.DRAGON, i));
         }
         
         // 检查是否包含所有需要的牌
@@ -190,7 +185,7 @@ public class GameLogicService {
      */
     private boolean isSequence(Tile first, Tile second, Tile third) {
         // 字牌不能组成顺子
-        if (first.getType() == TileType.HONOR) {
+        if (first.getType() == TileType.WIND || first.getType() == TileType.DRAGON) {
             return false;
         }
         
@@ -211,88 +206,65 @@ public class GameLogicService {
     /**
      * 计算役种
      */
-    public List<Yaku> calculateYaku(PlayerGame player, Game game, Tile winningTile) {
-        List<Yaku> yakus = new ArrayList<>();
-        
-        // 检查基本役种
-        if (isPinfu(player, winningTile)) {
-            yakus.add(new Yaku("平和", 1));
+    public List<Yaku> calculateYaku(PlayerGame player, Game game) {
+        if (player == null || game == null) {
+            return Collections.emptyList();
         }
-        if (isTanyao(player)) {
-            yakus.add(new Yaku("断幺九", 1));
-        }
-        if (isSanshoku(player)) {
-            yakus.add(new Yaku("三色同顺", 2));
-        }
-        if (isIttsu(player)) {
-            yakus.add(new Yaku("一气通贯", 2));
-        }
-        if (isToitoi(player)) {
-            yakus.add(new Yaku("对对和", 2));
-        }
-        if (isSanankou(player)) {
-            yakus.add(new Yaku("三暗刻", 2));
-        }
-        if (isChinitsu(player)) {
-            yakus.add(new Yaku("清一色", 6));
-        }
-        if (isTsuuiisou(player)) {
-            yakus.add(new Yaku("字一色", 13));
-        }
-        if (isTsumo(player, game)) {
-            yakus.add(new Yaku("自摸", 1));
-        }
-        
-        // 检查特殊役种
-        if (isSanshokudoukou(player)) {
-            yakus.add(new Yaku("三色同刻", 2));
-        }
-        if (isSankantsu(player)) {
-            yakus.add(new Yaku("三杠子", 2));
-        }
-        if (isShousangen(player)) {
-            yakus.add(new Yaku("小三元", 2));
-        }
-        if (isDaisangen(player)) {
-            yakus.add(new Yaku("大三元", 13));
-        }
-        if (isShousuushi(player)) {
-            yakus.add(new Yaku("小四喜", 13));
-        }
-        if (isDaisuushi(player)) {
-            yakus.add(new Yaku("大四喜", 26));
-        }
-        if (isRyuuiisou(player)) {
-            yakus.add(new Yaku("绿一色", 13));
-        }
-        if (isChinroutou(player)) {
-            yakus.add(new Yaku("清老头", 13));
-        }
-        if (isChuurenpoutou(player)) {
-            yakus.add(new Yaku("九莲宝灯", 13));
-        }
-        if (isHonroutou(player)) {
-            yakus.add(new Yaku("混老头", 2));
-        }
-        if (isSuuankou(player)) {
-            yakus.add(new Yaku("四暗刻", 13));
-        }
-        if (isTenhou(player)) {
-            yakus.add(new Yaku("天和", 13));
-        }
-        
-        // 检查立直相关役种
+
+        List<Yaku> yakuList = new ArrayList<>();
+        List<Tile> handTiles = player.getHandTiles();
+        List<Meld> melds = player.getMelds();
+        Tile winningTile = game.getLastDiscardedTile(); // 获取最后一张打出的牌作为和牌
+
+        // 检查立直
         if (player.getIsRiichi()) {
-            yakus.add(new Yaku("立直", 1));
+            yakuList.add(new Yaku("立直", 1));
             if (player.getIsIppatsu()) {
-                yakus.add(new Yaku("一发", 1));
+                yakuList.add(new Yaku("一发", 1));
             }
         }
-        if (player.getIsDoubleRiichi()) {
-            yakus.add(new Yaku("双立直", 2));
+
+        // 检查门清
+        if (player.getIsMenzen()) {
+            yakuList.add(new Yaku("门清", 1));
         }
-        
-        return yakus;
+
+        // 检查平和
+        if (isPinfu(handTiles, melds, game.getRoundWind(), player.getSeatWind(), winningTile)) {
+            yakuList.add(new Yaku("平和", 1));
+        }
+
+        // 检查一气通贯
+        if (isIttsu(handTiles, melds)) {
+            yakuList.add(new Yaku("一气通贯", player.getIsMenzen() ? 2 : 1));
+        }
+
+        // 检查三色同顺
+        if (isSanshokuDoujun(handTiles, melds)) {
+            yakuList.add(new Yaku("三色同顺", player.getIsMenzen() ? 2 : 1));
+        }
+
+        // 检查七对子
+        if (isSevenPairs(handTiles)) {
+            yakuList.add(new Yaku("七对子", 2));
+        }
+
+        // 检查对对和
+        if (isToitoi(handTiles, melds)) {
+            yakuList.add(new Yaku("对对和", 2));
+        }
+
+        // 检查混一色
+        if (isHonitsu(handTiles, melds)) {
+            yakuList.add(new Yaku("混一色", player.getIsMenzen() ? 3 : 2));
+        }
+
+        // 检查清一色
+        if (isChinitsu(handTiles, melds)) {
+            yakuList.add(new Yaku("清一色", player.getIsMenzen() ? 6 : 5));
+        }
+
+        return yakuList;
     }
     
     /**
@@ -495,39 +467,51 @@ public class GameLogicService {
     /**
      * 检查平和
      */
-    private boolean isPinfu(PlayerGame player, Tile winningTile) {
-        // 平和的条件：
-        // 1. 没有副露
-        if (!player.getMelds().isEmpty()) {
+    private boolean isPinfu(List<Tile> handTiles, List<Meld> melds, Wind roundWind, Wind seatWind, Tile winningTile) {
+        // 如果有副露，不能是平和
+        if (melds != null && !melds.isEmpty()) {
             return false;
         }
-        
-        // 2. 所有面子都是顺子
-        List<Tile> handTiles = new ArrayList<>(player.getHandTiles());
-        handTiles.add(winningTile);
-        
-        // 排序手牌
-        Collections.sort(handTiles, (a, b) -> {
-            if (a.getType() != b.getType()) {
-                return a.getType().ordinal() - b.getType().ordinal();
-            }
-            return a.getNumber() - b.getNumber();
-        });
-        
-        // 检查是否都是顺子
-        for (int i = 0; i < handTiles.size(); i += 3) {
-            Tile first = handTiles.get(i);
-            Tile second = handTiles.get(i + 1);
-            Tile third = handTiles.get(i + 2);
-            
-            // 检查是否是顺子
-            if (!isSequence(first, second, third)) {
+
+        // 检查所有面子组合
+        List<Tile> remainingTiles = new ArrayList<>(handTiles);
+        if (winningTile != null) {
+            remainingTiles.add(winningTile);
+        }
+
+        // 检查是否有刻子
+        for (int i = 0; i < remainingTiles.size() - 2; i++) {
+            if (isTriplet(remainingTiles.get(i), remainingTiles.get(i + 1), remainingTiles.get(i + 2))) {
                 return false;
             }
         }
-        
-        // 3. 和牌是两面或双碰
-        return isTwoSidedWait(handTiles, winningTile) || isDoublePairWait(handTiles, winningTile);
+
+        // 检查对子是否为场风或自风
+        for (int i = 0; i < remainingTiles.size() - 1; i++) {
+            if (remainingTiles.get(i).getType() == remainingTiles.get(i + 1).getType() &&
+                remainingTiles.get(i).getNumber() == remainingTiles.get(i + 1).getNumber()) {
+                // 检查是否为场风或自风
+                if (remainingTiles.get(i).getType() == TileType.WIND) {
+                    int windNumber = remainingTiles.get(i).getNumber();
+                    if (windNumber == roundWind.ordinal() + 1 || windNumber == seatWind.ordinal() + 1) {
+                        return false;
+                    }
+                }
+                break;
+            }
+        }
+
+        // 检查是否有边张或嵌张
+        for (int i = 0; i < remainingTiles.size() - 2; i++) {
+            if (isSequence(remainingTiles.get(i), remainingTiles.get(i + 1), remainingTiles.get(i + 2))) {
+                // 检查是否为边张或嵌张
+                if (remainingTiles.get(i).getNumber() == 1 || remainingTiles.get(i + 2).getNumber() == 9) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
     }
     
     /**
@@ -543,7 +527,8 @@ public class GameLogicService {
         
         // 检查所有牌是否都是2-8的数牌
         for (Tile tile : allTiles) {
-            if (tile.getType() == TileType.HONOR || 
+            if (tile.getType() == TileType.WIND || 
+                tile.getType() == TileType.DRAGON || 
                 tile.getNumber() == 1 || 
                 tile.getNumber() == 9) {
                 return false;
@@ -556,69 +541,128 @@ public class GameLogicService {
     /**
      * 检查三色同顺
      */
-    private boolean isSanshoku(PlayerGame player) {
-        List<Tile> handTiles = new ArrayList<>(player.getHandTiles());
-        
-        // 检查手牌中的顺子
-        for (int i = 0; i < handTiles.size() - 2; i++) {
-            for (int j = i + 1; j < handTiles.size() - 1; j++) {
-                for (int k = j + 1; k < handTiles.size(); k++) {
-                    Tile first = handTiles.get(i);
-                    Tile second = handTiles.get(j);
-                    Tile third = handTiles.get(k);
-                    
-                    if (isSequence(first, second, third)) {
-                        // 检查是否有相同数字的顺子在其他花色中
-                        if (hasSameNumberSequenceInOtherSuits(first.getNumber(), handTiles)) {
-                            return true;
-                        }
-                    }
+    private boolean isSanshokuDoujun(List<Tile> handTiles, List<Meld> melds) {
+        // 合并手牌和副露的牌
+        List<Tile> allTiles = new ArrayList<>(handTiles);
+        if (melds != null) {
+            for (Meld meld : melds) {
+                allTiles.addAll(meld.getTiles());
+            }
+        }
+
+        // 按数字分组
+        Map<Integer, List<Tile>> tilesByNumber = new HashMap<>();
+        for (Tile tile : allTiles) {
+            if (tile.getType() != TileType.WIND && tile.getType() != TileType.DRAGON) {
+                tilesByNumber.computeIfAbsent(tile.getNumber(), k -> new ArrayList<>()).add(tile);
+            }
+        }
+
+        // 检查每个数字是否有三色同顺
+        for (List<Tile> tiles : tilesByNumber.values()) {
+            if (tiles.size() >= 3) {
+                Set<TileType> types = new HashSet<>();
+                for (Tile tile : tiles) {
+                    types.add(tile.getType());
+                }
+                if (types.size() == 3) {
+                    return true;
                 }
             }
         }
-        
+
         return false;
     }
     
     /**
      * 检查一气通贯
      */
-    private boolean isIttsu(PlayerGame player) {
-        List<Tile> handTiles = new ArrayList<>(player.getHandTiles());
-        
-        // 检查每种花色是否有123、456、789的顺子
-        for (TileType type : new TileType[]{TileType.MANZU, TileType.PINZU, TileType.SOUZU}) {
-            if (hasCompleteStraight(type, handTiles)) {
+    private boolean isIttsu(List<Tile> handTiles, List<Meld> melds) {
+        // 合并手牌和副露的牌
+        List<Tile> allTiles = new ArrayList<>(handTiles);
+        if (melds != null) {
+            for (Meld meld : melds) {
+                allTiles.addAll(meld.getTiles());
+            }
+        }
+
+        // 按类型分组
+        Map<TileType, List<Tile>> tilesByType = new HashMap<>();
+        for (Tile tile : allTiles) {
+            if (tile.getType() != TileType.WIND && tile.getType() != TileType.DRAGON) {
+                tilesByType.computeIfAbsent(tile.getType(), k -> new ArrayList<>()).add(tile);
+            }
+        }
+
+        // 检查每种类型是否有一气通贯
+        for (List<Tile> tiles : tilesByType.values()) {
+            if (hasCompleteStraight(tiles)) {
                 return true;
             }
         }
-        
+
         return false;
+    }
+
+    private boolean hasCompleteStraight(List<Tile> tiles) {
+        // 排序
+        Collections.sort(tiles, (a, b) -> a.getNumber() - b.getNumber());
+
+        // 检查是否有123、456、789的顺子
+        boolean has123 = false;
+        boolean has456 = false;
+        boolean has789 = false;
+
+        for (int i = 0; i < tiles.size() - 2; i++) {
+            if (isSequence(tiles.get(i), tiles.get(i + 1), tiles.get(i + 2))) {
+                if (tiles.get(i).getNumber() == 1) {
+                    has123 = true;
+                } else if (tiles.get(i).getNumber() == 4) {
+                    has456 = true;
+                } else if (tiles.get(i).getNumber() == 7) {
+                    has789 = true;
+                }
+            }
+        }
+
+        return has123 && has456 && has789;
     }
     
     /**
      * 检查对对和
      */
-    private boolean isToitoi(PlayerGame player) {
-        List<Tile> allTiles = new ArrayList<>(player.getHandTiles());
-        
-        // 添加副露的牌
-        for (Meld meld : player.getMelds()) {
-            allTiles.addAll(meld.getTiles());
-        }
-        
-        // 检查所有面子是否都是刻子
-        for (int i = 0; i < allTiles.size(); i += 3) {
-            Tile first = allTiles.get(i);
-            Tile second = allTiles.get(i + 1);
-            Tile third = allTiles.get(i + 2);
-            
-            if (!isTriplet(first, second, third)) {
-                return false;
+    private boolean isToitoi(List<Tile> handTiles, List<Meld> melds) {
+        // 合并手牌和副露的牌
+        List<Tile> allTiles = new ArrayList<>(handTiles);
+        if (melds != null) {
+            for (Meld meld : melds) {
+                allTiles.addAll(meld.getTiles());
             }
         }
-        
-        return true;
+
+        // 检查所有面子组合
+        List<Tile> remainingTiles = new ArrayList<>(allTiles);
+        int tripletCount = 0;
+
+        // 检查刻子
+        for (int i = 0; i < remainingTiles.size() - 2; i++) {
+            if (isTriplet(remainingTiles.get(i), remainingTiles.get(i + 1), remainingTiles.get(i + 2))) {
+                tripletCount++;
+                i += 2; // 跳过已检查的牌
+            }
+        }
+
+        // 检查对子
+        for (int i = 0; i < remainingTiles.size() - 1; i++) {
+            if (remainingTiles.get(i).getType() == remainingTiles.get(i + 1).getType() &&
+                remainingTiles.get(i).getNumber() == remainingTiles.get(i + 1).getNumber()) {
+                tripletCount++;
+                i++; // 跳过已检查的牌
+            }
+        }
+
+        // 必须有4个刻子或对子
+        return tripletCount == 4;
     }
     
     /**
@@ -642,23 +686,30 @@ public class GameLogicService {
     /**
      * 检查清一色
      */
-    private boolean isChinitsu(PlayerGame player) {
-        List<Tile> allTiles = new ArrayList<>(player.getHandTiles());
-        
-        // 添加副露的牌
-        for (Meld meld : player.getMelds()) {
-            allTiles.addAll(meld.getTiles());
-        }
-        
-        // 检查是否都是同一种花色
-        TileType firstType = allTiles.get(0).getType();
-        for (Tile tile : allTiles) {
-            if (tile.getType() != firstType) {
+    private boolean isChinitsu(List<Tile> handTiles, List<Meld> melds) {
+        Set<TileType> types = new HashSet<>();
+
+        // 检查手牌
+        for (Tile tile : handTiles) {
+            if (tile.getType() == TileType.WIND || tile.getType() == TileType.DRAGON) {
                 return false;
             }
+            types.add(tile.getType());
         }
-        
-        return true;
+
+        // 检查副露
+        if (melds != null) {
+            for (Meld meld : melds) {
+                for (Tile tile : meld.getTiles()) {
+                    if (tile.getType() == TileType.WIND || tile.getType() == TileType.DRAGON) {
+                        return false;
+                    }
+                    types.add(tile.getType());
+                }
+            }
+        }
+
+        return types.size() == 1;
     }
     
     /**
@@ -674,7 +725,7 @@ public class GameLogicService {
         
         // 检查是否都是字牌
         for (Tile tile : allTiles) {
-            if (tile.getType() != TileType.HONOR) {
+            if (tile.getType() != TileType.WIND && tile.getType() != TileType.DRAGON) {
                 return false;
             }
         }
@@ -768,434 +819,251 @@ public class GameLogicService {
     }
     
     /**
-     * 检查三色同刻
+     * 获取可能的副露
      */
-    private boolean isSanshokudoukou(PlayerGame player) {
-        List<Tile> allTiles = new ArrayList<>(player.getHandTiles());
+    public List<Meld> getPossibleMelds(List<Tile> handTiles, Tile discardedTile) {
+        List<Meld> possibleMelds = new ArrayList<>();
+        
+        // 检查是否可以碰
+        if (canPon(handTiles, discardedTile)) {
+            possibleMelds.add(createPonMeld(handTiles, discardedTile));
+        }
+        
+        // 检查是否可以吃
+        possibleMelds.addAll(getPossibleChiMelds(handTiles, discardedTile));
+        
+        // 检查是否可以杠
+        if (canKan(handTiles, discardedTile)) {
+            possibleMelds.add(createKanMeld(handTiles, discardedTile));
+        }
+        
+        return possibleMelds;
+    }
+    
+    /**
+     * 检查是否可以碰
+     */
+    private boolean canPon(List<Tile> handTiles, Tile discardedTile) {
+        int count = 0;
+        for (Tile tile : handTiles) {
+            if (tile.getType() == discardedTile.getType() && 
+                tile.getNumber() == discardedTile.getNumber()) {
+                count++;
+            }
+        }
+        return count >= 2;
+    }
+    
+    /**
+     * 创建碰副露
+     */
+    private Meld createPonMeld(List<Tile> handTiles, Tile discardedTile) {
+        List<Tile> meldTiles = new ArrayList<>();
+        meldTiles.add(discardedTile);
+        
+        int found = 0;
+        for (Tile tile : handTiles) {
+            if (tile.getType() == discardedTile.getType() && 
+                tile.getNumber() == discardedTile.getNumber() && 
+                found < 2) {
+                meldTiles.add(tile);
+                found++;
+            }
+        }
+        
+        return new Meld(MeldType.PON, meldTiles, true, (Long)null);
+    }
+    
+    /**
+     * 获取可能的吃副露
+     */
+    private List<Meld> getPossibleChiMelds(List<Tile> handTiles, Tile discardedTile) {
+        List<Meld> chiMelds = new ArrayList<>();
+        
+        // 荣牌不能是字牌
+        if (discardedTile.getType() == TileType.WIND || 
+            discardedTile.getType() == TileType.DRAGON) {
+            return chiMelds;
+        }
+        
+        int number = discardedTile.getNumber();
+        TileType type = discardedTile.getType();
+        
+        // 检查三种可能的顺子
+        if (number <= 7) { // n, n+1, n+2
+            if (hasTile(handTiles, type, number + 1) && 
+                hasTile(handTiles, type, number + 2)) {
+                List<Tile> meldTiles = new ArrayList<>();
+                meldTiles.add(discardedTile);
+                meldTiles.add(findTile(handTiles, type, number + 1));
+                meldTiles.add(findTile(handTiles, type, number + 2));
+                chiMelds.add(new Meld(MeldType.CHI, meldTiles, true, (Long)null));
+            }
+        }
+        
+        if (number >= 2 && number <= 8) { // n-1, n, n+1
+            if (hasTile(handTiles, type, number - 1) && 
+                hasTile(handTiles, type, number + 1)) {
+                List<Tile> meldTiles = new ArrayList<>();
+                meldTiles.add(findTile(handTiles, type, number - 1));
+                meldTiles.add(discardedTile);
+                meldTiles.add(findTile(handTiles, type, number + 1));
+                chiMelds.add(new Meld(MeldType.CHI, meldTiles, true, (Long)null));
+            }
+        }
+        
+        if (number >= 3) { // n-2, n-1, n
+            if (hasTile(handTiles, type, number - 2) && 
+                hasTile(handTiles, type, number - 1)) {
+                List<Tile> meldTiles = new ArrayList<>();
+                meldTiles.add(findTile(handTiles, type, number - 2));
+                meldTiles.add(findTile(handTiles, type, number - 1));
+                meldTiles.add(discardedTile);
+                chiMelds.add(new Meld(MeldType.CHI, meldTiles, true, (Long)null));
+            }
+        }
+        
+        return chiMelds;
+    }
+    
+    /**
+     * 检查是否可以杠
+     */
+    private boolean canKan(List<Tile> handTiles, Tile discardedTile) {
+        int count = 0;
+        for (Tile tile : handTiles) {
+            if (tile.getType() == discardedTile.getType() && 
+                tile.getNumber() == discardedTile.getNumber()) {
+                count++;
+            }
+        }
+        return count >= 3;
+    }
+    
+    /**
+     * 创建杠副露
+     */
+    private Meld createKanMeld(List<Tile> handTiles, Tile discardedTile) {
+        List<Tile> meldTiles = new ArrayList<>();
+        meldTiles.add(discardedTile);
+        
+        int found = 0;
+        for (Tile tile : handTiles) {
+            if (tile.getType() == discardedTile.getType() && 
+                tile.getNumber() == discardedTile.getNumber() && 
+                found < 3) {
+                meldTiles.add(tile);
+                found++;
+            }
+        }
+        
+        return new Meld(MeldType.KAN, meldTiles, true, (Long)null);
+    }
+    
+    /**
+     * 检查手牌中是否存在指定牌
+     */
+    private boolean hasTile(List<Tile> handTiles, TileType type, int number) {
+        return handTiles.stream().anyMatch(t -> 
+            t.getType() == type && t.getNumber() == number);
+    }
+    
+    /**
+     * 在手牌中找到指定牌
+     */
+    private Tile findTile(List<Tile> handTiles, TileType type, int number) {
+        return handTiles.stream()
+            .filter(t -> t.getType() == type && t.getNumber() == number)
+            .findFirst()
+            .orElse(null);
+    }
+
+    private boolean isStandardWin(List<Tile> handTiles, List<Meld> melds) {
+        // 复制手牌列表
+        List<Tile> tiles = new ArrayList<>(handTiles);
         
         // 添加副露的牌
-        for (Meld meld : player.getMelds()) {
-            allTiles.addAll(meld.getTiles());
-        }
-        
-        // 检查每种花色是否有相同数字的刻子
-        for (int number = 1; number <= 9; number++) {
-            boolean hasManzu = false;
-            boolean hasPinzu = false;
-            boolean hasSouzu = false;
-            
-            for (int i = 0; i < allTiles.size() - 2; i++) {
-                Tile first = allTiles.get(i);
-                Tile second = allTiles.get(i + 1);
-                Tile third = allTiles.get(i + 2);
-                
-                if (isTriplet(first, second, third) && first.getNumber() == number) {
-                    switch (first.getType()) {
-                        case MANZU:
-                            hasManzu = true;
-                            break;
-                        case PINZU:
-                            hasPinzu = true;
-                            break;
-                        case SOUZU:
-                            hasSouzu = true;
-                            break;
-                    }
-                }
-            }
-            
-            if (hasManzu && hasPinzu && hasSouzu) {
-                return true;
+        if (melds != null) {
+            for (Meld meld : melds) {
+                tiles.addAll(meld.getTiles());
             }
         }
         
-        return false;
-    }
-    
-    /**
-     * 检查三杠子
-     */
-    private boolean isSankantsu(PlayerGame player) {
-        int kantsuCount = 0;
-        
-        // 检查手牌中的杠子
-        for (Meld meld : player.getMelds()) {
-            if (meld.getType() == MeldType.KAN) {
-                kantsuCount++;
+        // 排序手牌
+        Collections.sort(tiles, (a, b) -> {
+            if (a.getType() != b.getType()) {
+                return a.getType().ordinal() - b.getType().ordinal();
             }
-        }
+            return a.getNumber() - b.getNumber();
+        });
         
-        return kantsuCount >= 3;
-    }
-    
-    /**
-     * 检查小三元
-     */
-    private boolean isShousangen(PlayerGame player) {
-        List<Tile> allTiles = new ArrayList<>(player.getHandTiles());
-        
-        // 添加副露的牌
-        for (Meld meld : player.getMelds()) {
-            allTiles.addAll(meld.getTiles());
-        }
-        
-        // 检查白、发、中的刻子
-        boolean hasHaku = false;
-        boolean hasHatsu = false;
-        boolean hasChun = false;
-        
-        for (int i = 0; i < allTiles.size() - 2; i++) {
-            Tile first = allTiles.get(i);
-            Tile second = allTiles.get(i + 1);
-            Tile third = allTiles.get(i + 2);
-            
-            if (isTriplet(first, second, third)) {
-                if (first.getType() == TileType.HONOR) {
-                    switch (first.getNumber()) {
-                        case 5: // 白
-                            hasHaku = true;
-                            break;
-                        case 6: // 发
-                            hasHatsu = true;
-                            break;
-                        case 7: // 中
-                            hasChun = true;
-                            break;
-                    }
-                }
-            }
-        }
-        
-        // 小三元需要两个刻子加一个对子
-        return (hasHaku && hasHatsu && hasChun) || 
-               (hasHaku && hasHatsu && hasChunPair(allTiles)) ||
-               (hasHaku && hasHatsuPair(allTiles) && hasChun) ||
-               (hasHakuPair(allTiles) && hasHatsu && hasChun);
-    }
-    
-    /**
-     * 检查大三元
-     */
-    private boolean isDaisangen(PlayerGame player) {
-        List<Tile> allTiles = new ArrayList<>(player.getHandTiles());
-        
-        // 添加副露的牌
-        for (Meld meld : player.getMelds()) {
-            allTiles.addAll(meld.getTiles());
-        }
-        
-        // 检查白、发、中的刻子
-        boolean hasHaku = false;
-        boolean hasHatsu = false;
-        boolean hasChun = false;
-        
-        for (int i = 0; i < allTiles.size() - 2; i++) {
-            Tile first = allTiles.get(i);
-            Tile second = allTiles.get(i + 1);
-            Tile third = allTiles.get(i + 2);
-            
-            if (isTriplet(first, second, third)) {
-                if (first.getType() == TileType.HONOR) {
-                    switch (first.getNumber()) {
-                        case 5: // 白
-                            hasHaku = true;
-                            break;
-                        case 6: // 发
-                            hasHatsu = true;
-                            break;
-                        case 7: // 中
-                            hasChun = true;
-                            break;
-                    }
-                }
-            }
-        }
-        
-        return hasHaku && hasHatsu && hasChun;
-    }
-    
-    /**
-     * 检查小四喜
-     */
-    private boolean isShousuushi(PlayerGame player) {
-        List<Tile> allTiles = new ArrayList<>(player.getHandTiles());
-        
-        // 添加副露的牌
-        for (Meld meld : player.getMelds()) {
-            allTiles.addAll(meld.getTiles());
-        }
-        
-        // 检查东南西北的刻子
-        boolean hasTon = false;
-        boolean hasNan = false;
-        boolean hasShaa = false;
-        boolean hasPei = false;
-        
-        for (int i = 0; i < allTiles.size() - 2; i++) {
-            Tile first = allTiles.get(i);
-            Tile second = allTiles.get(i + 1);
-            Tile third = allTiles.get(i + 2);
-            
-            if (isTriplet(first, second, third)) {
-                if (first.getType() == TileType.HONOR) {
-                    switch (first.getNumber()) {
-                        case 1: // 东
-                            hasTon = true;
-                            break;
-                        case 2: // 南
-                            hasNan = true;
-                            break;
-                        case 3: // 西
-                            hasShaa = true;
-                            break;
-                        case 4: // 北
-                            hasPei = true;
-                            break;
-                    }
-                }
-            }
-        }
-        
-        // 小四喜需要三个刻子加一个对子
-        return (hasTon && hasNan && hasShaa && hasPeiPair(allTiles)) ||
-               (hasTon && hasNan && hasShaaPair(allTiles) && hasPei) ||
-               (hasTon && hasNanPair(allTiles) && hasShaa && hasPei) ||
-               (hasTonPair(allTiles) && hasNan && hasShaa && hasPei);
-    }
-    
-    /**
-     * 检查大四喜
-     */
-    private boolean isDaisuushi(PlayerGame player) {
-        List<Tile> allTiles = new ArrayList<>(player.getHandTiles());
-        
-        // 添加副露的牌
-        for (Meld meld : player.getMelds()) {
-            allTiles.addAll(meld.getTiles());
-        }
-        
-        // 检查东南西北的刻子
-        boolean hasTon = false;
-        boolean hasNan = false;
-        boolean hasShaa = false;
-        boolean hasPei = false;
-        
-        for (int i = 0; i < allTiles.size() - 2; i++) {
-            Tile first = allTiles.get(i);
-            Tile second = allTiles.get(i + 1);
-            Tile third = allTiles.get(i + 2);
-            
-            if (isTriplet(first, second, third)) {
-                if (first.getType() == TileType.HONOR) {
-                    switch (first.getNumber()) {
-                        case 1: // 东
-                            hasTon = true;
-                            break;
-                        case 2: // 南
-                            hasNan = true;
-                            break;
-                        case 3: // 西
-                            hasShaa = true;
-                            break;
-                        case 4: // 北
-                            hasPei = true;
-                            break;
-                    }
-                }
-            }
-        }
-        
-        return hasTon && hasNan && hasShaa && hasPei;
-    }
-    
-    /**
-     * 检查绿一色
-     */
-    private boolean isRyuuiisou(PlayerGame player) {
-        List<Tile> allTiles = new ArrayList<>(player.getHandTiles());
-        
-        // 添加副露的牌
-        for (Meld meld : player.getMelds()) {
-            allTiles.addAll(meld.getTiles());
-        }
-        
-        // 检查是否都是绿牌（2,3,4,6,8索和发）
-        for (Tile tile : allTiles) {
-            if (tile.getType() == TileType.SOUZU) {
-                if (tile.getNumber() != 2 && tile.getNumber() != 3 && 
-                    tile.getNumber() != 4 && tile.getNumber() != 6 && 
-                    tile.getNumber() != 8) {
-                    return false;
-                }
-            } else if (tile.getType() == TileType.HONOR && tile.getNumber() != 6) {
-                return false;
-            }
-        }
-        
-        return true;
-    }
-    
-    /**
-     * 检查清老头
-     */
-    private boolean isChinroutou(PlayerGame player) {
-        List<Tile> allTiles = new ArrayList<>(player.getHandTiles());
-        
-        // 添加副露的牌
-        for (Meld meld : player.getMelds()) {
-            allTiles.addAll(meld.getTiles());
-        }
-        
-        // 检查是否都是老头牌（1,9万、1,9筒、1,9索）
-        for (Tile tile : allTiles) {
-            if (tile.getType().isNumberTile()) {
-                if (tile.getNumber() != 1 && tile.getNumber() != 9) {
-                    return false;
-                }
-            } else {
-                return false;
-            }
-        }
-        
-        return true;
-    }
-    
-    /**
-     * 检查九莲宝灯
-     */
-    private boolean isChuurenpoutou(PlayerGame player) {
-        // 九莲宝灯必须是清一色
-        if (!isChinitsu(player)) {
-            return false;
-        }
-        
-        List<Tile> allTiles = new ArrayList<>(player.getHandTiles());
-        
-        // 添加副露的牌
-        for (Meld meld : player.getMelds()) {
-            allTiles.addAll(meld.getTiles());
-        }
-        
-        // 检查是否符合九莲宝灯的要求
-        TileType type = allTiles.get(0).getType();
-        int[] counts = new int[9];
-        
-        // 统计每种牌的数量
-        for (Tile tile : allTiles) {
-            counts[tile.getNumber() - 1]++;
-        }
-        
-        // 检查是否符合九莲宝灯的要求
-        return counts[0] >= 3 && counts[8] >= 3 && // 1和9至少3张
-               counts[1] >= 1 && counts[2] >= 1 && counts[3] >= 1 && // 2-8至少1张
-               counts[4] >= 1 && counts[5] >= 1 && counts[6] >= 1 && counts[7] >= 1;
-    }
-    
-    /**
-     * 检查混老头
-     */
-    private boolean isHonroutou(PlayerGame player) {
-        List<Tile> allTiles = new ArrayList<>(player.getHandTiles());
-        
-        // 添加副露的牌
-        for (Meld meld : player.getMelds()) {
-            allTiles.addAll(meld.getTiles());
-        }
-        
-        // 检查是否都是老头牌（1,9万、1,9筒、1,9索）和字牌
-        for (Tile tile : allTiles) {
-            if (tile.getType().isNumberTile()) {
-                if (tile.getNumber() != 1 && tile.getNumber() != 9) {
-                    return false;
-                }
-            } else if (tile.getType() != TileType.HONOR) {
-                return false;
-            }
-        }
-        
-        return true;
-    }
-    
-    /**
-     * 检查四暗刻
-     */
-    private boolean isSuuankou(PlayerGame player) {
-        List<Tile> allTiles = new ArrayList<>(player.getHandTiles());
-        
-        // 添加副露的牌
-        for (Meld meld : player.getMelds()) {
-            allTiles.addAll(meld.getTiles());
-        }
-        
-        // 统计刻子数量
-        int koutsuCount = 0;
-        
-        // 检查手牌中的刻子
-        for (int i = 0; i < allTiles.size() - 2; i++) {
-            Tile first = allTiles.get(i);
-            Tile second = allTiles.get(i + 1);
-            Tile third = allTiles.get(i + 2);
-            
-            if (isTriplet(first, second, third)) {
-                koutsuCount++;
-                i += 2; // 跳过已检查的牌
-            }
-        }
-        
-        return koutsuCount >= 4;
-    }
-    
-    /**
-     * 检查天和
-     */
-    private boolean isTenhou(PlayerGame player) {
-        // 天和必须是庄家
-        if (!player.getIsDealer()) {
-            return false;
-        }
-        
-        // 天和必须是第一巡自摸
-        return player.getIsFirstTurn() && isTsumo(player, null);
-    }
-    
-    // 辅助方法
-    private boolean hasChunPair(List<Tile> tiles) {
-        return hasPair(tiles, TileType.HONOR, 7);
-    }
-    
-    private boolean hasHatsuPair(List<Tile> tiles) {
-        return hasPair(tiles, TileType.HONOR, 6);
-    }
-    
-    private boolean hasHakuPair(List<Tile> tiles) {
-        return hasPair(tiles, TileType.HONOR, 5);
-    }
-    
-    private boolean hasPeiPair(List<Tile> tiles) {
-        return hasPair(tiles, TileType.HONOR, 4);
-    }
-    
-    private boolean hasShaaPair(List<Tile> tiles) {
-        return hasPair(tiles, TileType.HONOR, 3);
-    }
-    
-    private boolean hasNanPair(List<Tile> tiles) {
-        return hasPair(tiles, TileType.HONOR, 2);
-    }
-    
-    private boolean hasTonPair(List<Tile> tiles) {
-        return hasPair(tiles, TileType.HONOR, 1);
-    }
-    
-    private boolean hasPair(List<Tile> tiles, TileType type, int number) {
+        // 检查是否有对子
+        boolean hasPair = false;
         for (int i = 0; i < tiles.size() - 1; i++) {
+            if (tiles.get(i).getType() == tiles.get(i + 1).getType() &&
+                tiles.get(i).getNumber() == tiles.get(i + 1).getNumber()) {
+                hasPair = true;
+                break;
+            }
+        }
+        
+        if (!hasPair) {
+            return false;
+        }
+        
+        // 检查剩余牌是否都是面子（顺子或刻子）
+        int i = 0;
+        while (i < tiles.size() - 2) {
             Tile first = tiles.get(i);
             Tile second = tiles.get(i + 1);
-            if (first.getType() == type && second.getType() == type &&
-                first.getNumber() == number && second.getNumber() == number) {
-                return true;
+            Tile third = tiles.get(i + 2);
+            
+            // 检查是否是刻子
+            if (first.getType() == second.getType() && second.getType() == third.getType() &&
+                first.getNumber() == second.getNumber() && second.getNumber() == third.getNumber()) {
+                i += 3;
+                continue;
+            }
+            
+            // 检查是否是顺子
+            if (first.getType() == second.getType() && second.getType() == third.getType() &&
+                first.getNumber() + 1 == second.getNumber() && second.getNumber() + 1 == third.getNumber()) {
+                i += 3;
+                continue;
+            }
+            
+            return false;
+        }
+        
+        return true;
+    }
+
+    private boolean isHonitsu(List<Tile> handTiles, List<Meld> melds) {
+        Set<TileType> types = new HashSet<>();
+        boolean hasHonorTile = false;
+
+        // 检查手牌
+        for (Tile tile : handTiles) {
+            if (tile.getType() == TileType.WIND || tile.getType() == TileType.DRAGON) {
+                hasHonorTile = true;
+            } else {
+                types.add(tile.getType());
             }
         }
-        return false;
+
+        // 检查副露
+        if (melds != null) {
+            for (Meld meld : melds) {
+                for (Tile tile : meld.getTiles()) {
+                    if (tile.getType() == TileType.WIND || tile.getType() == TileType.DRAGON) {
+                        hasHonorTile = true;
+                    } else {
+                        types.add(tile.getType());
+                    }
+                }
+            }
+        }
+
+        return types.size() == 1 && hasHonorTile;
     }
 } 

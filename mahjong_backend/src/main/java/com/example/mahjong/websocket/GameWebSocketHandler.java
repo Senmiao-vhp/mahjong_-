@@ -10,6 +10,7 @@ import org.springframework.stereotype.Controller;
 
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 @Controller
 public class GameWebSocketHandler {
@@ -94,5 +95,28 @@ public class GameWebSocketHandler {
      */
     public void broadcastGameLog(Long gameId, Map<String, Object> log) {
         messagingTemplate.convertAndSend("/topic/game/" + gameId + "/logs", log);
+    }
+
+    /**
+     * 广播操作超时消息
+     */
+    public void broadcastTimeoutMessage(Long gameId, String message) {
+        Map<String, Object> timeoutMessage = new HashMap<>();
+        timeoutMessage.put("type", "TIMEOUT");
+        timeoutMessage.put("message", message);
+        timeoutMessage.put("timestamp", System.currentTimeMillis());
+        
+        messagingTemplate.convertAndSend("/topic/game/" + gameId + "/timeout", timeoutMessage);
+    }
+    
+    /**
+     * 广播剩余操作时间
+     */
+    public void broadcastRemainingTime(Long gameId, long remainingTime) {
+        Map<String, Object> timeMessage = new HashMap<>();
+        timeMessage.put("type", "REMAINING_TIME");
+        timeMessage.put("remaining_time", remainingTime);
+        
+        messagingTemplate.convertAndSend("/topic/game/" + gameId + "/time", timeMessage);
     }
 } 

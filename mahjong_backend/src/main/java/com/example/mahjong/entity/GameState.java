@@ -32,6 +32,11 @@ public enum GameState implements Serializable {
     WAITING_FOR_ACTION("等待操作"),
     
     /**
+     * 等待玩家操作超时
+     */
+    WAITING_FOR_ACTION_TIMEOUT("操作超时"),
+    
+    /**
      * 游戏结束
      */
     GAME_OVER("游戏结束"),
