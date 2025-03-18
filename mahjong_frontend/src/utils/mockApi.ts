@@ -20,8 +20,30 @@ const mockUsers = [
 const mockNicknames = mockUsers.map(user => user.nickname);
 
 // 生成模拟JWT令牌
-function generateMockToken(userId: number): string {
-  return `mock_token_${userId}_${Date.now()}`;
+function generateMockToken(userId: number, nickname: string): string {
+  // JWT令牌结构：header.payload.signature
+  // 这里我们只模拟header和payload部分，省略签名部分
+  
+  // 创建header
+  const header = {
+    alg: 'HS256',
+    typ: 'JWT'
+  };
+  
+  // 创建payload
+  const payload = {
+    sub: userId.toString(), // subject (用户ID)
+    nickname: nickname,     // 用户昵称
+    iat: Math.floor(Date.now() / 1000), // issued at (令牌创建时间)
+    exp: Math.floor(Date.now() / 1000) + 86400 // expiration (令牌过期时间，24小时后)
+  };
+  
+  // 编码header和payload
+  const encodedHeader = btoa(JSON.stringify(header));
+  const encodedPayload = btoa(JSON.stringify(payload));
+  
+  // 生成模拟令牌
+  return `${encodedHeader}.${encodedPayload}.mock_signature`;
 }
 
 // 模拟健康检查
@@ -49,7 +71,7 @@ export function mockGuestLogin() {
     data: {
       id,
       nickname,
-      token: generateMockToken(id)
+      token: generateMockToken(id, nickname)
     }
   };
 }
@@ -84,7 +106,7 @@ export function mockRegisterUser(nickname: string) {
     data: {
       id,
       nickname,
-      token: generateMockToken(id)
+      token: generateMockToken(id, nickname)
     }
   };
 }
@@ -107,7 +129,7 @@ export function mockUserLogin(id: number) {
     data: {
       id: user.id,
       nickname: user.nickname,
-      token: generateMockToken(user.id)
+      token: generateMockToken(user.id, user.nickname)
     }
   };
 }

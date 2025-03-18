@@ -4,6 +4,88 @@ import { ENABLE_MOCK_API, mockApiFunctions, mockGetUserInfo } from './mockApi';
 export const API_BASE_URL = 'http://localhost:8080/api'
 
 /**
+ * 获取JWT令牌相关函数
+ */
+export const tokenUtils = {
+  // 保存令牌
+  setToken: (token: string) => {
+    localStorage.setItem('token', token);
+  },
+  
+  // 获取令牌
+  getToken: () => {
+    return localStorage.getItem('token');
+  },
+  
+  // 移除令牌
+  removeToken: () => {
+    localStorage.removeItem('token');
+  },
+  
+  // 从JWT令牌解析用户信息
+  parseUserFromToken: (token: string) => {
+    try {
+      // 获取JWT payload部分
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(''));
+      
+      return JSON.parse(jsonPayload);
+    } catch (e) {
+      console.error('解析JWT令牌失败', e);
+      return null;
+    }
+  },
+  
+  // 保存用户信息
+  setUserInfo: (id: number, nickname: string) => {
+    localStorage.setItem('userId', id.toString());
+    localStorage.setItem('userNickname', nickname);
+  },
+  
+  // 获取用户信息
+  getUserInfo: () => {
+    const token = localStorage.getItem('token');
+    if (!token) return null;
+    
+    try {
+      const payload = tokenUtils.parseUserFromToken(token);
+      if (payload && payload.sub) {
+        // 正常情况下，payload.sub应该是用户ID
+        return {
+          id: payload.sub,
+          nickname: payload.nickname || localStorage.getItem('userNickname') || '未知用户'
+        };
+      }
+    } catch (e) {
+      console.error('获取用户信息失败', e);
+    }
+    
+    // 回退到本地存储的信息
+    const userId = localStorage.getItem('userId');
+    const userNickname = localStorage.getItem('userNickname');
+    
+    if (userId) {
+      return {
+        id: userId,
+        nickname: userNickname || '未知用户'
+      };
+    }
+    
+    return null;
+  },
+  
+  // 清除所有认证信息
+  clearAuth: () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('userId');
+    localStorage.removeItem('userNickname');
+  }
+};
+
+/**
  * 发送GET请求
  * @param url 请求URL
  * @param params 查询参数
@@ -153,7 +235,7 @@ function getHeaders() {
   }
   
   // 添加认证令牌
-  const token = localStorage.getItem('token')
+  const token = tokenUtils.getToken();
   if (token) {
     headers['Authorization'] = `Bearer ${token}`
   }
@@ -187,9 +269,7 @@ async function handleResponse(response: Response) {
     // 处理401未授权错误
     if (response.status === 401) {
       // 清除本地存储的认证信息
-      localStorage.removeItem('userId')
-      localStorage.removeItem('userNickname')
-      localStorage.removeItem('token')
+      tokenUtils.clearAuth();
       
       // 重定向到登录页
       window.location.href = '/'
@@ -380,12 +460,6 @@ function getMockFunction(url: string) {
   // 精确匹配
   if (url in mockApiFunctions) {
     return mockApiFunctions[url];
-  }
-  
-  // 处理获取用户信息的请求
-  if (url.match(/^\/users\/\d+$/)) {
-    const id = parseInt(url.split('/').pop() || '0');
-    return () => mockGetUserInfo(id);
   }
   
   // 前缀匹配

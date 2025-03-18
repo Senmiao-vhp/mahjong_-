@@ -210,7 +210,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { get, post, testApiConnection, fallbackTestApiConnection, comprehensiveApiTest, API_BASE_URL } from '../utils/api'
+import { get, post, testApiConnection, fallbackTestApiConnection, comprehensiveApiTest, API_BASE_URL, tokenUtils } from '../utils/api'
 import { ENABLE_MOCK_API, setMockApiEnabled } from '../utils/mockApi'
 
 // 定义API测试结果的类型
@@ -342,35 +342,14 @@ const guestLogin = async () => {
     loading.close()
     
     if (data.code === 200) {
-      // 保存用户信息到本地存储
-      localStorage.setItem('userId', data.data.id)
-      localStorage.setItem('userNickname', data.data.nickname)
-      localStorage.setItem('token', data.data.token)
+      // 保存令牌和用户信息
+      tokenUtils.setToken(data.data.token);
+      tokenUtils.setUserInfo(data.data.id, data.data.nickname);
       
       ElMessage.success('登录成功')
       
-      // 添加延迟确保数据已写入数据库
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // 验证用户信息是否已写入
-      try {
-        const userInfo = await get(`/users/${data.data.id}`)
-        if (userInfo.code === 200) {
-          router.push('/game')
-        } else {
-          // 如果第一次获取失败，等待后重试
-          await new Promise(resolve => setTimeout(resolve, 1000))
-          const retryInfo = await get(`/users/${data.data.id}`)
-          if (retryInfo.code === 200) {
-            router.push('/game')
-          } else {
-            throw new Error('无法获取用户信息')
-          }
-        }
-      } catch (error) {
-        ElMessage.error('创建账号成功，但获取用户信息失败，请重试登录')
-        console.error('获取用户信息失败:', error)
-      }
+      // 导航到游戏主界面
+      router.push('/game')
     } else {
       ElMessage.error(data.msg || '登录失败')
     }
@@ -463,10 +442,9 @@ const createUser = async () => {
       // 创建成功
       userId.value = data.data.id.toString()
       
-      // 保存用户信息到本地存储
-      localStorage.setItem('userId', data.data.id)
-      localStorage.setItem('userNickname', data.data.nickname)
-      localStorage.setItem('token', data.data.token)
+      // 保存令牌和用户信息
+      tokenUtils.setToken(data.data.token);
+      tokenUtils.setUserInfo(data.data.id, data.data.nickname);
       
       successDialogVisible.value = true
     } else if (data.code === 409) {
@@ -529,17 +507,14 @@ const login = async () => {
       // 登录成功
       loginDialogVisible.value = false
       
-      // 保存用户信息到本地存储
-      localStorage.setItem('userId', data.data.id)
-      localStorage.setItem('userNickname', data.data.nickname)
-      localStorage.setItem('token', data.data.token)
+      // 保存令牌和用户信息
+      tokenUtils.setToken(data.data.token);
+      tokenUtils.setUserInfo(data.data.id, data.data.nickname);
       
       ElMessage.success('登录成功')
       
-      // 添加一个短暂的延迟，确保用户信息已经保存到数据库中
-      setTimeout(() => {
-        router.push('/game')
-      }, 500)
+      // 导航到游戏主界面
+      router.push('/game')
     } else if (data.code === 404) {
       ElMessage.error('用户ID不存在')
     } else {

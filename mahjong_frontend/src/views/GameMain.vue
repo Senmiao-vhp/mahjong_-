@@ -28,7 +28,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { get } from '../utils/api'
+import { tokenUtils } from '../utils/api'
 
 const router = useRouter()
 const userId = ref('')
@@ -37,67 +37,30 @@ const loading = ref(false)
 
 // 在组件挂载时获取用户信息
 onMounted(async () => {
-  // 从本地存储获取用户信息
-  const storedUserId = localStorage.getItem('userId')
-  const storedNickname = localStorage.getItem('userNickname')
-  const token = localStorage.getItem('token')
+  // 获取令牌
+  const token = tokenUtils.getToken();
   
-  if (!storedUserId || !token) {
+  // 验证是否有令牌
+  if (!token) {
     ElMessage.warning('用户未登录，请先登录')
     router.push('/')
     return
   }
   
-  // 先使用本地存储的信息
-  userId.value = storedUserId
-  userNickname.value = storedNickname || '加载中...'
+  // 从令牌中获取用户信息
+  const userInfo = tokenUtils.getUserInfo();
   
-  // 从后端获取最新用户信息
-  await fetchUserInfo(parseInt(storedUserId))
-})
-
-// 从后端获取用户信息
-const fetchUserInfo = async (id: number) => {
-  loading.value = true
-  
-  try {
-    const data = await get(`/users/${id}`)
-    
-    if (data.code === 200) {
-      // 更新用户信息
-      userNickname.value = data.data.nickname
-      
-      // 更新本地存储
-      localStorage.setItem('userNickname', data.data.nickname)
-    } else {
-      console.error('获取用户信息失败:', data.msg)
-      // 如果获取失败，继续使用本地存储的昵称
-      
-      // 如果是404错误（用户不存在），可能是因为数据库写入延迟，尝试延迟后重试
-      if (data.code === 404) {
-        setTimeout(() => {
-          console.log('延迟1秒后重试获取用户信息')
-          fetchUserInfo(id)
-        }, 1000)
-      }
-    }
-  } catch (error: any) {
-    console.error('获取用户信息错误:', error)
-    
-    // 如果错误消息包含"不存在"，可能是因为数据库写入延迟，尝试延迟后重试
-    if (error.message && (error.message.includes('不存在') || error.message.includes('请求的资源不存在'))) {
-      ElMessage.info('正在同步用户信息，请稍候...')
-      setTimeout(() => {
-        console.log('延迟1秒后重试获取用户信息')
-        fetchUserInfo(id)
-      }, 1000)
-    } else {
-      ElMessage.error(`获取用户信息失败: ${error.message}`)
-    }
-  } finally {
-    loading.value = false
+  if (!userInfo) {
+    ElMessage.error('无法解析用户信息，请重新登录')
+    tokenUtils.clearAuth();
+    router.push('/')
+    return
   }
-}
+  
+  // 设置用户信息
+  userId.value = userInfo.id.toString();
+  userNickname.value = userInfo.nickname;
+})
 
 // 开始游戏
 const startGame = () => {
@@ -107,9 +70,7 @@ const startGame = () => {
 // 登出
 const logout = () => {
   // 清除登录状态
-  localStorage.removeItem('userId')
-  localStorage.removeItem('userNickname')
-  localStorage.removeItem('token')
+  tokenUtils.clearAuth();
   
   router.push('/')
 }
