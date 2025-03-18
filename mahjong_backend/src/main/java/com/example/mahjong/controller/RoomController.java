@@ -9,12 +9,21 @@ import com.example.mahjong.entity.RoomDTO;
 import com.example.mahjong.service.RoomService;
 import com.example.mahjong.common.JwtUtil;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
+@Tag(name = "房间管理", description = "提供房间的创建、加入、准备、开始游戏等操作")
 @RestController
 @RequestMapping("/rooms")
 public class RoomController {
@@ -31,8 +40,16 @@ public class RoomController {
     /**
      * 创建房间
      */
+    @Operation(summary = "创建新房间", description = "创建一个新的麻将游戏房间")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "创建成功"),
+        @ApiResponse(responseCode = "401", description = "未授权，需要先登录"),
+        @ApiResponse(responseCode = "500", description = "服务器内部错误")
+    })
     @PostMapping
-    public ResponseEntity<Map<String, Object>> createRoom(@RequestBody Map<String, Object> params, HttpServletRequest request) {
+    public ResponseEntity<Map<String, Object>> createRoom(
+            @Parameter(description = "房间参数", required = true) @RequestBody Map<String, Object> params, 
+            HttpServletRequest request) {
         Map<String, Object> response = new HashMap<>();
         
         try {
@@ -131,10 +148,18 @@ public class RoomController {
     /**
      * 获取房间列表
      */
+    @Operation(summary = "获取房间列表", description = "分页获取符合条件的房间列表")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "获取成功"),
+        @ApiResponse(responseCode = "500", description = "服务器内部错误")
+    })
     @GetMapping
     public ResponseEntity<Map<String, Object>> getRoomList(
+            @Parameter(description = "房间状态(0:等待中, 1:游戏中)", example = "0") 
             @RequestParam(required = false) Integer status,
+            @Parameter(description = "页码", example = "1") 
             @RequestParam(defaultValue = "1") int page,
+            @Parameter(description = "每页数量", example = "10") 
             @RequestParam(defaultValue = "10") int page_size) {
         
         Map<String, Object> response = new HashMap<>();
@@ -167,8 +192,16 @@ public class RoomController {
     /**
      * 获取房间信息
      */
+    @Operation(summary = "获取房间详情", description = "根据房间ID获取房间详细信息")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "获取成功"),
+        @ApiResponse(responseCode = "404", description = "房间不存在"),
+        @ApiResponse(responseCode = "500", description = "服务器内部错误")
+    })
     @GetMapping("/{id}")
-    public ResponseEntity<Map<String, Object>> getRoomById(@PathVariable Long id) {
+    public ResponseEntity<Map<String, Object>> getRoomById(
+            @Parameter(description = "房间ID", required = true, example = "1") 
+            @PathVariable Long id) {
         Map<String, Object> response = new HashMap<>();
         
         try {
@@ -201,8 +234,19 @@ public class RoomController {
     /**
      * 加入房间
      */
+    @Operation(summary = "加入房间", description = "玩家加入指定ID的房间")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "加入成功"),
+        @ApiResponse(responseCode = "401", description = "未授权，需要先登录"),
+        @ApiResponse(responseCode = "404", description = "房间不存在"),
+        @ApiResponse(responseCode = "409", description = "房间已满或状态不允许加入"),
+        @ApiResponse(responseCode = "500", description = "服务器内部错误")
+    })
     @PostMapping("/{roomId}/join")
-    public ResponseEntity<Map<String, Object>> joinRoom(@PathVariable Long roomId, HttpServletRequest request) {
+    public ResponseEntity<Map<String, Object>> joinRoom(
+            @Parameter(description = "房间ID", required = true, example = "1") 
+            @PathVariable Long roomId, 
+            HttpServletRequest request) {
         Map<String, Object> response = new HashMap<>();
         
         try {
@@ -238,9 +282,19 @@ public class RoomController {
     /**
      * 准备/取消准备
      */
+    @Operation(summary = "更新准备状态", description = "玩家在房间中更新准备状态")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "更新成功"),
+        @ApiResponse(responseCode = "401", description = "未授权，需要先登录"),
+        @ApiResponse(responseCode = "404", description = "房间不存在"),
+        @ApiResponse(responseCode = "409", description = "房间状态不允许更改准备状态"),
+        @ApiResponse(responseCode = "500", description = "服务器内部错误")
+    })
     @PostMapping("/{roomId}/ready")
     public ResponseEntity<Map<String, Object>> readyInRoom(
+            @Parameter(description = "房间ID", required = true, example = "1") 
             @PathVariable Long roomId,
+            @Parameter(description = "准备状态参数", required = true) 
             @RequestBody Map<String, Object> params,
             HttpServletRequest request) {
         
@@ -282,8 +336,20 @@ public class RoomController {
     /**
      * 开始游戏
      */
+    @Operation(summary = "开始游戏", description = "房主开始游戏，所有玩家必须已准备就绪")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "游戏开始成功"),
+        @ApiResponse(responseCode = "401", description = "未授权，需要先登录"),
+        @ApiResponse(responseCode = "403", description = "权限不足，只有房主能开始游戏"),
+        @ApiResponse(responseCode = "404", description = "房间不存在"),
+        @ApiResponse(responseCode = "409", description = "房间状态不允许开始游戏或玩家未准备完成"),
+        @ApiResponse(responseCode = "500", description = "服务器内部错误")
+    })
     @PostMapping("/{roomId}/start")
-    public ResponseEntity<Map<String, Object>> startGame(@PathVariable Long roomId, HttpServletRequest request) {
+    public ResponseEntity<Map<String, Object>> startGame(
+            @Parameter(description = "房间ID", required = true, example = "1") 
+            @PathVariable Long roomId, 
+            HttpServletRequest request) {
         Map<String, Object> response = new HashMap<>();
         
         try {
@@ -320,10 +386,18 @@ public class RoomController {
     }
 
     /**
-     * 获取房间内的玩家
+     * 获取房间内玩家列表
      */
+    @Operation(summary = "获取房间玩家", description = "获取指定房间内的所有玩家信息")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "获取成功"),
+        @ApiResponse(responseCode = "404", description = "房间不存在"),
+        @ApiResponse(responseCode = "500", description = "服务器内部错误")
+    })
     @GetMapping("/{roomId}/players")
-    public ResponseEntity<Map<String, Object>> getPlayersInRoom(@PathVariable Long roomId) {
+    public ResponseEntity<Map<String, Object>> getPlayersInRoom(
+            @Parameter(description = "房间ID", required = true, example = "1") 
+            @PathVariable Long roomId) {
         Map<String, Object> response = new HashMap<>();
         
         try {

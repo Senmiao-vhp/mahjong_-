@@ -135,6 +135,21 @@ public class Game implements Serializable {
     private List<AIPlayer> aiPlayers;
     
     /**
+     * 是否自摸
+     */
+    private Boolean isTsumo;
+    
+    /**
+     * 赢家用户ID
+     */
+    private Long winner;
+    
+    /**
+     * 是否正常结束
+     */
+    private Boolean normalEnd;
+    
+    /**
      * 默认构造函数
      */
     public Game() {
@@ -760,5 +775,47 @@ public class Game implements Serializable {
     public void clearWaitingForAction() {
         this.isWaitingForAction = false;
         this.lastActionTime = null;
+    }
+    
+    /**
+     * 获取是否正常结束
+     */
+    public Boolean isNormalEnd() {
+        return normalEnd != null && normalEnd;
+    }
+    
+    /**
+     * 设置是否正常结束
+     */
+    public void setNormalEnd(Boolean normalEnd) {
+        this.normalEnd = normalEnd;
+    }
+    
+    /**
+     * 获取赢家用户ID
+     */
+    public Long getWinner() {
+        return winner;
+    }
+    
+    /**
+     * 设置赢家用户ID
+     */
+    public void setWinner(Long winner) {
+        this.winner = winner;
+    }
+    
+    /**
+     * 获取是否自摸
+     */
+    public Boolean getIsTsumo() {
+        return isTsumo != null && isTsumo;
+    }
+    
+    /**
+     * 设置是否自摸
+     */
+    public void setIsTsumo(Boolean isTsumo) {
+        this.isTsumo = isTsumo;
     }
 } 

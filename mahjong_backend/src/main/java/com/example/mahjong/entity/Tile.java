@@ -1,10 +1,12 @@
 package com.example.mahjong.entity;
 
 import java.io.Serializable;
+import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
  * 麻将牌实体类
  */
+@Schema(description = "麻将牌信息")
 public class Tile implements Serializable {
     
     private static final long serialVersionUID = 1L;
@@ -12,16 +14,19 @@ public class Tile implements Serializable {
     /**
      * 牌类型
      */
+    @Schema(description = "牌类型", example = "MANZU", allowableValues = {"MANZU", "PINZU", "SOUZU", "WIND", "DRAGON"})
     private TileType type;
     
     /**
      * 牌数字
      */
+    @Schema(description = "牌数字", example = "1")
     private Integer number;
     
     /**
      * 是否为赤宝牌
      */
+    @Schema(description = "是否为赤宝牌", example = "false")
     private Boolean isRedDora;
     
     /**

@@ -220,3 +220,15 @@ CREATE TABLE `user`
 -- 设置自增起始值为10000000（8位数字的最小值）
 ALTER TABLE `user`
     AUTO_INCREMENT = 10000000;
+
+  CREATE TABLE room_player (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    room_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    position INT NOT NULL,
+    is_ready BOOLEAN DEFAULT false,
+    join_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_room_user (room_id, user_id),
+    UNIQUE KEY unique_room_position (room_id, position)
+);

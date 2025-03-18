@@ -7,6 +7,7 @@ import com.example.mahjong.service.AIService;
 import com.example.mahjong.service.GameWebSocketService;
 import com.example.mahjong.mapper.GameMapper;
 import com.example.mahjong.mapper.PlayerGameMapper;
+import com.example.mahjong.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -27,20 +28,23 @@ public class GameServiceImpl implements GameService {
     private final GameLogicService gameLogicService;
     private final AIService aiService;
     private final ObjectMapper objectMapper;
-    
+    private final UserService userService;
+
     @Autowired
     public GameServiceImpl(GameMapper gameMapper,
                          PlayerGameMapper playerGameMapper,
                          GameWebSocketService webSocketService,
                          GameLogicService gameLogicService,
                          AIService aiService,
-                         ObjectMapper objectMapper) {
+                         ObjectMapper objectMapper,
+                         UserService userService) {
         this.gameMapper = gameMapper;
         this.playerGameMapper = playerGameMapper;
         this.webSocketService = webSocketService;
         this.gameLogicService = gameLogicService;
         this.aiService = aiService;
         this.objectMapper = objectMapper;
+        this.userService = userService;
         logger.info("GameServiceImpl初始化完成");
     }
 
@@ -108,6 +112,11 @@ public class GameServiceImpl implements GameService {
     }
 
     @Override
+    public List<Game> getGamesByRoomId(Long roomId) {
+        return gameMapper.selectByRoomId(roomId);
+    }
+
+    @Override
     public List<PlayerGame> getPlayersByGameId(Long gameId) {
         return playerGameMapper.selectByGameId(gameId);
     }
@@ -115,6 +124,17 @@ public class GameServiceImpl implements GameService {
     @Override
     public PlayerGame getPlayerGameByGameIdAndUserId(Long gameId, Long userId) {
         return playerGameMapper.selectByGameIdAndUserId(gameId, userId);
+    }
+
+    @Override
+    public boolean updatePlayerGame(PlayerGame playerGame) {
+        try {
+            playerGameMapper.updateById(playerGame);
+            return true;
+        } catch (Exception e) {
+            logger.severe("更新PlayerGame失败: " + e.getMessage());
+            return false;
+        }
     }
 
     @Override
@@ -149,8 +169,10 @@ public class GameServiceImpl implements GameService {
         for (PlayerGame pg : playerGames) {
             Map<String, Object> player = new HashMap<>();
             player.put("user_id", pg.getUserId());
-            // 这里需要从用户服务获取昵称，暂时使用ID代替
-            player.put("nickname", "用户" + pg.getUserId());
+            // 从用户服务获取昵称
+            User user = userService.getUserById(pg.getUserId());
+            String nickname = (user != null) ? user.getNickname() : "用户" + pg.getUserId();
+            player.put("nickname", nickname);
             player.put("position", pg.getPosition());
             player.put("score", pg.getScore());
             player.put("is_dealer", pg.getIsDealer());
@@ -186,19 +208,24 @@ public class GameServiceImpl implements GameService {
                     .collect(Collectors.toList());
                 
                 result.put("tiles", tileStrings);
-                
+        
+        // 计算听牌
                 // 计算听牌
-                // 注意：这里假设GameLogicService有一个方法可以计算听牌
-                // 如果没有，需要实现或使用其他方式
                 List<String> waitingTileStrings = new ArrayList<>();
                 try {
-                    // 尝试使用gameLogicService计算听牌
-                    waitingTileStrings = gameLogicService.getPossibleWaitingTiles(playerGame)
-                        .stream()
-                        .map(Tile::toString)
+                    // 使用gameLogicService计算听牌
+                    List<Tile> waitingTiles = gameLogicService.getPossibleWaitingTiles(playerGame);
+                    if (waitingTiles != null && !waitingTiles.isEmpty()) {
+                        waitingTileStrings = waitingTiles.stream()
+                            .map(tile -> tile.getType().name() + tile.getNumber())
                         .collect(Collectors.toList());
+                        logger.info("玩家" + userId + "的听牌: " + String.join(", ", waitingTileStrings));
+                    } else {
+                        logger.info("玩家" + userId + "没有听牌");
+                    }
                 } catch (Exception e) {
                     logger.warning("计算听牌失败: " + e.getMessage());
+                    e.printStackTrace();
                 }
                 
                 result.put("tenpai_tiles", waitingTileStrings);
@@ -206,10 +233,10 @@ public class GameServiceImpl implements GameService {
                 result.put("tiles", new ArrayList<>());
                 result.put("tenpai_tiles", new ArrayList<>());
             }
-            
-            // 获取副露信息
+        
+        // 获取副露信息
             List<String> meldJsons = playerGameMapper.getPlayerMelds(gameId, userId);
-            List<Map<String, Object>> melds = new ArrayList<>();
+        List<Map<String, Object>> melds = new ArrayList<>();
             
             if (meldJsons != null && !meldJsons.isEmpty()) {
                 for (String meldJson : meldJsons) {
@@ -223,8 +250,8 @@ public class GameServiceImpl implements GameService {
                     melds.add(meldMap);
                 }
             }
-            
-            result.put("melds", melds);
+        
+        result.put("melds", melds);
             
         } catch (Exception e) {
             logger.severe("获取玩家手牌失败: " + e.getMessage());
@@ -241,48 +268,38 @@ public class GameServiceImpl implements GameService {
         List<Map<String, Object>> result = new ArrayList<>();
         
         // 获取游戏中的所有玩家
-        List<PlayerGame> players = playerGameMapper.selectByGameId(gameId);
+        List<PlayerGame> playerGames = playerGameMapper.selectByGameId(gameId);
         
         // 为每个位置创建牌河信息
         for (int i = 0; i < 4; i++) {
             Map<String, Object> discardPile = new HashMap<>();
             discardPile.put("position", i);
             
-            // 这里需要从另一个表获取牌河信息
-            // 暂时模拟一些数据
+            // 获取该位置玩家的弃牌信息
             List<Map<String, Object>> tiles = new ArrayList<>();
             
-            if (i == 0) {
-                // 东家牌河
-                Map<String, Object> tile1 = new HashMap<>();
-                tile1.put("tile", "1p");
-                tile1.put("is_riichi", false);
-                tile1.put("is_tsumogiri", false);
-                tile1.put("is_furiten", false);
-                tiles.add(tile1);
-                
-                Map<String, Object> tile2 = new HashMap<>();
-                tile2.put("tile", "9s");
-                tile2.put("is_riichi", true);
-                tile2.put("is_tsumogiri", true);
-                tile2.put("is_furiten", false);
-                tiles.add(tile2);
-            } else if (i == 1) {
-                // 南家牌河
-                Map<String, Object> tile = new HashMap<>();
-                tile.put("tile", "3m");
-                tile.put("is_riichi", false);
-                tile.put("is_tsumogiri", false);
-                tile.put("is_furiten", false);
-                tiles.add(tile);
-            } else if (i == 3) {
-                // 北家牌河
-                Map<String, Object> tile = new HashMap<>();
-                tile.put("tile", "5p");
-                tile.put("is_riichi", false);
-                tile.put("is_tsumogiri", true);
-                tile.put("is_furiten", false);
-                tiles.add(tile);
+            // 查找该位置的玩家
+            PlayerGame playerAtPosition = null;
+            for (PlayerGame pg : playerGames) {
+                if (pg.getPosition() == i) {
+                    playerAtPosition = pg;
+                    break;
+                }
+            }
+            
+            if (playerAtPosition != null && playerAtPosition.getDiscardTiles() != null) {
+                // 转换弃牌为前端需要的格式
+                for (Tile tile : playerAtPosition.getDiscardTiles()) {
+                    Map<String, Object> tileMap = new HashMap<>();
+                    tileMap.put("type", tile.getType().name());
+                    tileMap.put("number", tile.getNumber());
+                    tileMap.put("is_red_dora", tile.getIsRedDora());
+                    // 如果有立直信息，添加立直标记
+                    boolean isRiichiTile = playerAtPosition.getIsRiichi() && 
+                                        playerAtPosition.getDiscardTiles().indexOf(tile) == playerAtPosition.getDiscardTiles().size() - 1;
+                    tileMap.put("is_riichi_tile", isRiichiTile);
+                    tiles.add(tileMap);
+                }
             }
             
             discardPile.put("tiles", tiles);
@@ -495,90 +512,247 @@ public class GameServiceImpl implements GameService {
     public Map<String, Object> getGameSettlement(Long gameId) {
         Map<String, Object> result = new HashMap<>();
         
+        try {
         // 获取游戏信息
         Game game = gameMapper.selectById(gameId);
-        if (game == null || game.getStatus() != GameState.FINISHED) { // 只有已结束的游戏才有结算信息
+            if (game == null) {
             return null;
         }
         
-        // 获取玩家信息
-        List<PlayerGame> playerGames = playerGameMapper.selectByGameId(gameId);
-        
-        // 设置结算基本信息
-        result.put("settlement_type", 0); // 0-和牌，1-流局
-        result.put("settlement_time", game.getEndTime());
-        result.put("honba_count", game.getHonbaCount());
-        result.put("riichi_stick_count", game.getRiichiSticks());
-        
-        // 设置玩家结算信息
+            // 基本信息
+            result.put("game_id", gameId);
+            result.put("status", game.getStatus().ordinal());
+            result.put("round", game.getRoundWind().ordinal());
+            result.put("honba", game.getHonbaCount());
+            
+            // 结算类型：0=和牌结束，1=流局，2=中断
+            int settlementType = 0;
+            if (game.getStatus() == GameState.FINISHED) {
+                // 检查是否是中断结束
+                if (game.isNormalEnd()) {
+                    // 检查是否有赢家
+                    if (game.getWinner() != null) {
+                        // 如果有赢家，表示和牌结束
+                        settlementType = 0;
+                    } else {
+                        // 如果没有赢家，表示流局
+                        settlementType = 1;
+                    }
+                } else {
+                    // 中断结束
+                    settlementType = 2;
+                }
+            }
+            result.put("settlement_type", settlementType);
+            
+            // 获取玩家信息
+            List<PlayerGame> playerGames = playerGameMapper.selectByGameId(gameId);
         List<Map<String, Object>> players = new ArrayList<>();
+            
         for (PlayerGame pg : playerGames) {
             Map<String, Object> player = new HashMap<>();
-            player.put("position", pg.getPosition());
             player.put("user_id", pg.getUserId());
-            player.put("nickname", "用户" + pg.getUserId()); // 实际应该从用户服务获取
-            
-            // 这里应该计算点数变化，暂时模拟
-            int scoreChange = 0;
-            if (pg.getPosition() == 0) {
-                scoreChange = -8000;
-            } else if (pg.getPosition() == 1) {
-                scoreChange = 8000;
-            }
-            
-            player.put("score_change", scoreChange);
-            player.put("final_score", pg.getScore());
-            
+                
+                // 获取用户昵称
+                User user = userService.getUserById(pg.getUserId());
+                String nickname = (user != null) ? user.getNickname() : "用户" + pg.getUserId();
+                player.put("nickname", nickname);
+                
+                player.put("position", pg.getPosition());
+                player.put("score", pg.getScore());
+                player.put("is_dealer", pg.getIsDealer());
             players.add(player);
         }
+            
         result.put("players", players);
         
         // 设置和牌信息（如果是和牌结束）
-        if ((Integer) result.get("settlement_type") == 0) {
+            if (settlementType == 0) {
             List<Map<String, Object>> winningHands = new ArrayList<>();
             
-            // 假设是1号位玩家和牌
+                // 获取获胜玩家
+                PlayerGame winningPlayer = null;
+                if (game.getWinner() != null) {
+                    for (PlayerGame pg : playerGames) {
+                        if (pg.getUserId().equals(game.getWinner())) {
+                            winningPlayer = pg;
+                            break;
+                        }
+                    }
+                }
+                
+                if (winningPlayer != null) {
             Map<String, Object> winningHand = new HashMap<>();
-            winningHand.put("position", 1);
-            winningHand.put("win_type", 1); // 荣和
-            winningHand.put("from_position", 0); // 从东家荣和
-            winningHand.put("win_tile", "5m");
-            winningHand.put("hand_tiles", Arrays.asList("1m", "1m", "2m", "3m", "4m", "6p", "7p", "8p", "1s", "2s", "3s", "4s"));
-            winningHand.put("melds", new ArrayList<>());
-            winningHand.put("dora_count", 1);
-            winningHand.put("ura_dora_count", 0);
-            winningHand.put("aka_dora_count", 0);
-            winningHand.put("fu", 40);
-            winningHand.put("han", 3);
-            winningHand.put("score", 8000);
-            
-            // 设置役种
-            List<Map<String, Object>> yaku = new ArrayList<>();
-            Map<String, Object> yaku1 = new HashMap<>();
-            yaku1.put("name", "立直");
-            yaku1.put("han", 1);
-            yaku.add(yaku1);
-            
-            Map<String, Object> yaku2 = new HashMap<>();
-            yaku2.put("name", "门前清自摸和");
-            yaku2.put("han", 1);
-            yaku.add(yaku2);
-            
-            Map<String, Object> yaku3 = new HashMap<>();
-            yaku3.put("name", "平和");
-            yaku3.put("han", 1);
-            yaku.add(yaku3);
-            
-            winningHand.put("yaku", yaku);
-            
+                    winningHand.put("user_id", winningPlayer.getUserId());
+                    
+                    // 获取用户昵称
+                    User user = userService.getUserById(winningPlayer.getUserId());
+                    String nickname = (user != null) ? user.getNickname() : "用户" + winningPlayer.getUserId();
+                    winningHand.put("nickname", nickname);
+                    
+                    winningHand.put("position", winningPlayer.getPosition());
+                    winningHand.put("score", winningPlayer.getScore());
+                    
+                    // 和牌详情
+                    Map<String, Object> handDetails = new HashMap<>();
+                    
+                    // 从数据库获取和牌信息
+                    try {
+                        // 获取手牌
+                        String handTilesJson = playerGameMapper.getPlayerHandTiles(gameId, winningPlayer.getUserId());
+                        List<Tile> handTiles = objectMapper.readValue(handTilesJson, 
+                            objectMapper.getTypeFactory().constructCollectionType(List.class, Tile.class));
+                        
+                        // 获取副露
+                        List<String> meldJsons = playerGameMapper.getPlayerMelds(gameId, winningPlayer.getUserId());
+                        List<Meld> melds = new ArrayList<>();
+                        
+                        if (meldJsons != null && !meldJsons.isEmpty()) {
+                            for (String meldJson : meldJsons) {
+                                Meld meld = objectMapper.readValue(meldJson, Meld.class);
+                                melds.add(meld);
+                            }
+                        }
+                        
+                        // 计算役种和分数
+                        List<Yaku> yakus = gameLogicService.calculateYaku(winningPlayer, game);
+                        int basePoints = calculateBasePoints(handTiles, melds, game.getDoraIndicators()); // 计算符数
+                        boolean isDealer = winningPlayer.getIsDealer();
+                        
+                        // 判断是否自摸
+                        boolean isTsumo = game.getIsTsumo();
+                        
+                        int score = gameLogicService.calculateScore(yakus, basePoints, isDealer, isTsumo);
+                        
+                        handDetails.put("han", yakus.stream().mapToInt(Yaku::getHan).sum());
+                        handDetails.put("fu", basePoints);
+                        handDetails.put("score", score);
+                        handDetails.put("yakus", yakus.stream().map(Yaku::getName).collect(Collectors.toList()));
+                        
+                        // 添加手牌信息
+                        List<Map<String, Object>> tiles = new ArrayList<>();
+                        for (Tile tile : handTiles) {
+                            Map<String, Object> tileMap = new HashMap<>();
+                            tileMap.put("type", tile.getType().name());
+                            tileMap.put("number", tile.getNumber());
+                            tileMap.put("is_red_dora", tile.getIsRedDora());
+                            tiles.add(tileMap);
+                        }
+                        handDetails.put("tiles", tiles);
+                        
+                        // 添加副露信息
+                        List<Map<String, Object>> meldList = new ArrayList<>();
+                        for (Meld meld : melds) {
+                            Map<String, Object> meldMap = new HashMap<>();
+                            meldMap.put("type", meld.getType().name());
+                            
+                            List<Map<String, Object>> meldTiles = new ArrayList<>();
+                            for (Tile tile : meld.getTiles()) {
+                                Map<String, Object> tileMap = new HashMap<>();
+                                tileMap.put("type", tile.getType().name());
+                                tileMap.put("number", tile.getNumber());
+                                tileMap.put("is_red_dora", tile.getIsRedDora());
+                                meldTiles.add(tileMap);
+                            }
+                            meldMap.put("tiles", meldTiles);
+                            meldList.add(meldMap);
+                        }
+                        handDetails.put("melds", meldList);
+                        
+                        // 添加宝牌信息
+                        List<Map<String, Object>> doraIndicators = new ArrayList<>();
+                        for (Tile tile : game.getDoraIndicators()) {
+                            Map<String, Object> tileMap = new HashMap<>();
+                            tileMap.put("type", tile.getType().name());
+                            tileMap.put("number", tile.getNumber());
+                            tileMap.put("is_red_dora", tile.getIsRedDora());
+                            doraIndicators.add(tileMap);
+                        }
+                        handDetails.put("dora_indicators", doraIndicators);
+                        
+                    } catch (Exception e) {
+                        logger.severe("获取和牌信息失败: " + e.getMessage());
+                        e.printStackTrace();
+                    }
+                    
+                    winningHand.put("hand", handDetails);
             winningHands.add(winningHand);
+                }
+                
             result.put("winning_hands", winningHands);
         }
         
-        // 广播游戏结算信息
-        webSocketService.broadcastGameSettlement(gameId, result);
+            // 宝牌指示牌
+            result.put("dora_indicators", parseDoraIndicators(game.getDoraIndicators()));
         
         return result;
+            
+        } catch (Exception e) {
+            logger.severe("获取游戏结算信息失败: " + e.getMessage());
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    /**
+     * 计算和牌的符数
+     */
+    private int calculateBasePoints(List<Tile> handTiles, List<Meld> melds, List<Tile> doraIndicators) {
+        // 基本符数规则
+        int basePoints = 20; // 初始符数
+        
+        // 门清状态判断
+        boolean isConcealed = melds == null || melds.isEmpty() || melds.stream().allMatch(meld -> !meld.isOpen());
+        if (isConcealed) {
+            basePoints += 10; // 门清加符
+        }
+        
+        // 雀头计算
+        for (int i = 0; i < handTiles.size() - 1; i++) {
+            Tile tile1 = handTiles.get(i);
+            for (int j = i + 1; j < handTiles.size(); j++) {
+                Tile tile2 = handTiles.get(j);
+                if (tile1.getType() == tile2.getType() && tile1.getNumber() == tile2.getNumber()) {
+                    // 雀头为役牌加符
+                    if (tile1.getType() == TileType.DRAGON) {
+                        basePoints += 2; // 三元牌雀头加符
+                    } else if (tile1.getType() == TileType.WIND) {
+                        basePoints += 2; // 风牌雀头加符
+                    }
+                    break;
+                }
+            }
+        }
+        
+        // 面子计算
+        if (melds != null) {
+            for (Meld meld : melds) {
+                if (meld.getType() == MeldType.PON) {
+                    Tile tile = meld.getTiles().get(0);
+                    if (tile.getType() == TileType.DRAGON) {
+                        basePoints += 4; // 明刻三元牌加符
+                    } else if (tile.getType() == TileType.WIND) {
+                        basePoints += 4; // 明刻风牌加符
+                    } else if (tile.getNumber() == 1 || tile.getNumber() == 9) {
+                        basePoints += 2; // 明刻幺九牌加符
+                    }
+                } else if (meld.getType() == MeldType.KAN) {
+                    Tile tile = meld.getTiles().get(0);
+                    if (tile.getType() == TileType.DRAGON) {
+                        basePoints += 16; // 明杠三元牌加符
+                    } else if (tile.getType() == TileType.WIND) {
+                        basePoints += 16; // 明杠风牌加符
+                    } else if (tile.getNumber() == 1 || tile.getNumber() == 9) {
+                        basePoints += 8; // 明杠幺九牌加符
+                    } else {
+                        basePoints += 4; // 明杠中张牌加符
+                    }
+                }
+            }
+        }
+        
+        // 上限符数为110符
+        return Math.min(110, basePoints);
     }
 
     @Override

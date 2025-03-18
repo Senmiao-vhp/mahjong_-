@@ -6,11 +6,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
+
 import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Tag(name = "游戏管理", description = "提供游戏创建、查询、操作等功能")
 @RestController
 @RequestMapping("/games")
 public class GameController {
@@ -21,8 +30,16 @@ public class GameController {
     /**
      * 获取游戏详情
      */
+    @Operation(summary = "获取游戏详情", description = "根据游戏ID获取游戏详细信息")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "获取成功"),
+        @ApiResponse(responseCode = "404", description = "游戏不存在"),
+        @ApiResponse(responseCode = "500", description = "服务器内部错误")
+    })
     @GetMapping("/{gameId}")
-    public ResponseEntity<Map<String, Object>> getGameDetails(@PathVariable Long gameId) {
+    public ResponseEntity<Map<String, Object>> getGameDetails(
+            @Parameter(description = "游戏ID", required = true, example = "1") 
+            @PathVariable Long gameId) {
         Map<String, Object> response = new HashMap<>();
         
         try {
@@ -50,8 +67,17 @@ public class GameController {
     /**
      * 获取玩家手牌
      */
+    @Operation(summary = "获取玩家手牌", description = "获取当前玩家在指定游戏中的手牌")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "获取成功"),
+        @ApiResponse(responseCode = "401", description = "未授权，需要先登录"),
+        @ApiResponse(responseCode = "403", description = "权限不足，只能查看自己的手牌"),
+        @ApiResponse(responseCode = "404", description = "游戏不存在或玩家不在游戏中"),
+        @ApiResponse(responseCode = "500", description = "服务器内部错误")
+    })
     @GetMapping("/{gameId}/hand")
     public ResponseEntity<Map<String, Object>> getPlayerHand(
+            @Parameter(description = "游戏ID", required = true, example = "1") 
             @PathVariable Long gameId,
             HttpServletRequest request) {
         
@@ -85,8 +111,16 @@ public class GameController {
     /**
      * 获取所有玩家的弃牌区
      */
+    @Operation(summary = "获取弃牌堆", description = "获取指定游戏中所有玩家的弃牌堆")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "获取成功"),
+        @ApiResponse(responseCode = "404", description = "游戏不存在"),
+        @ApiResponse(responseCode = "500", description = "服务器内部错误")
+    })
     @GetMapping("/{gameId}/discards")
-    public ResponseEntity<Map<String, Object>> getDiscardPiles(@PathVariable Long gameId) {
+    public ResponseEntity<Map<String, Object>> getDiscardPiles(
+            @Parameter(description = "游戏ID", required = true, example = "1") 
+            @PathVariable Long gameId) {
         Map<String, Object> response = new HashMap<>();
         
         try {
@@ -114,9 +148,20 @@ public class GameController {
     /**
      * 打出一张牌
      */
+    @Operation(summary = "打出牌", description = "玩家在游戏中打出一张牌")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "操作成功"),
+        @ApiResponse(responseCode = "400", description = "无效的操作或参数"),
+        @ApiResponse(responseCode = "401", description = "未授权，需要先登录"),
+        @ApiResponse(responseCode = "403", description = "权限不足，不是当前玩家的回合"),
+        @ApiResponse(responseCode = "404", description = "游戏不存在或玩家不在游戏中"),
+        @ApiResponse(responseCode = "500", description = "服务器内部错误")
+    })
     @PostMapping("/{gameId}/discard")
     public ResponseEntity<Map<String, Object>> discardTile(
+            @Parameter(description = "游戏ID", required = true, example = "1") 
             @PathVariable Long gameId,
+            @Parameter(description = "牌信息", required = true) 
             @RequestBody Map<String, Object> params,
             HttpServletRequest request) {
         

@@ -20,6 +20,9 @@ spring:
   sql:
     init:
       mode: never
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
@@ -43,7 +46,24 @@ logging:
     root: INFO
     com.example.mahjong: DEBUG
     org.mybatis: DEBUG
+    org.springdoc: INFO
 
 jwt:
   secret: mahjong-game-secret-key-for-jwt-token-generation-and-validation
-  expiration: 86400000  # 24小时，单位毫秒 
+  expiration: 86400000  # 24小时，单位毫秒
+
+# SpringDoc OpenAPI配置
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operationsSorter: method
+    tagsSorter: alpha
+    disable-swagger-default-url: true
+    disable-auth-configuration: true
+  show-actuator: false
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
+  packages-to-scan: com.example.mahjong.controller
