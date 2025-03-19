@@ -1,0 +1,113 @@
+Date : 2025-03-17 22:39:08
+Directory : d:\吾日三省吾身\项目开发\mahjong_all
+Total : 48 files,  3731 codes, 466 comments, 615 blanks, all 4812 lines
+
+Languages
++--------------------+------------+------------+------------+------------+------------+
+| language           | files      | code       | comment    | blank      | total      |
++--------------------+------------+------------+------------+------------+------------+
+| Java               |         28 |      1,682 |        426 |        514 |      2,622 |
+| JSON               |          4 |      1,414 |          3 |          7 |      1,424 |
+| MS SQL             |          2 |        297 |         16 |         31 |        344 |
+| XML                |          3 |        102 |         19 |         10 |        131 |
+| CSS                |          1 |         70 |          0 |         10 |         80 |
+| vue                |          2 |         63 |          0 |         10 |         73 |
+| Markdown           |          2 |         52 |          0 |         23 |         75 |
+| YAML               |          1 |         22 |          0 |          3 |         25 |
+| HTML               |          1 |         13 |          0 |          1 |         14 |
+| TypeScript         |          3 |          9 |          2 |          5 |         16 |
+| JSON with Comments |          1 |          7 |          0 |          1 |          8 |
++--------------------+------------+------------+------------+------------+------------+
+
+Directories
++--------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| path                                                                                                               | files      | code       | comment    | blank      | total      |
++--------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+| .                                                                                                                  |         48 |      3,731 |        466 |        615 |      4,812 |
+| mahjong_backend                                                                                                    |         33 |      2,150 |        461 |        578 |      3,189 |
+| mahjong_backend (Files)                                                                                            |          2 |        149 |         19 |         30 |        198 |
+| mahjong_backend\src                                                                                                |         31 |      2,001 |        442 |        548 |      2,991 |
+| mahjong_backend\src\main                                                                                           |         30 |      1,998 |        442 |        546 |      2,986 |
+| mahjong_backend\src\main\java                                                                                      |         27 |      1,679 |        426 |        512 |      2,617 |
+| mahjong_backend\src\main\java\com                                                                                  |         27 |      1,679 |        426 |        512 |      2,617 |
+| mahjong_backend\src\main\java\com\example                                                                          |         27 |      1,679 |        426 |        512 |      2,617 |
+| mahjong_backend\src\main\java\com\example\mahjong                                                                  |         27 |      1,679 |        426 |        512 |      2,617 |
+| mahjong_backend\src\main\java\com\example\mahjong (Files)                                                          |          1 |         13 |          0 |          3 |         16 |
+| mahjong_backend\src\main\java\com\example\mahjong\common                                                           |          3 |        182 |         31 |         47 |        260 |
+| mahjong_backend\src\main\java\com\example\mahjong\config                                                           |          2 |         48 |          2 |         16 |         66 |
+| mahjong_backend\src\main\java\com\example\mahjong\controller                                                       |          4 |        568 |        127 |        189 |        884 |
+| mahjong_backend\src\main\java\com\example\mahjong\entity                                                           |          6 |         99 |          0 |         12 |        111 |
+| mahjong_backend\src\main\java\com\example\mahjong\exception                                                        |          1 |         21 |          7 |          5 |         33 |
+| mahjong_backend\src\main\java\com\example\mahjong\mapper                                                           |          4 |         98 |         57 |         33 |        188 |
+| mahjong_backend\src\main\java\com\example\mahjong\service                                                          |          6 |        650 |        202 |        207 |      1,059 |
+| mahjong_backend\src\main\java\com\example\mahjong\service (Files)                                                  |          3 |         46 |         81 |         35 |        162 |
+| mahjong_backend\src\main\java\com\example\mahjong\service\impl                                                     |          3 |        604 |        121 |        172 |        897 |
+| mahjong_backend\src\main\resources                                                                                 |          3 |        319 |         16 |         34 |        369 |
+| mahjong_backend\src\test                                                                                           |          1 |          3 |          0 |          2 |          5 |
+| mahjong_backend\src\test\java                                                                                      |          1 |          3 |          0 |          2 |          5 |
+| mahjong_backend\src\test\java\com                                                                                  |          1 |          3 |          0 |          2 |          5 |
+| mahjong_backend\src\test\java\com\example                                                                          |          1 |          3 |          0 |          2 |          5 |
+| mahjong_backend\src\test\java\com\example\hello                                                                    |          1 |          3 |          0 |          2 |          5 |
+| mahjong_frontend                                                                                                   |         15 |      1,581 |          5 |         37 |      1,623 |
+| mahjong_frontend (Files)                                                                                           |          8 |      1,442 |          4 |         14 |      1,460 |
+| mahjong_frontend\public                                                                                            |          1 |          1 |          0 |          0 |          1 |
+| mahjong_frontend\src                                                                                               |          6 |        138 |          1 |         23 |        162 |
+| mahjong_frontend\src (Files)                                                                                       |          4 |        102 |          1 |         16 |        119 |
+| mahjong_frontend\src\assets                                                                                        |          1 |          1 |          0 |          0 |          1 |
+| mahjong_frontend\src\components                                                                                    |          1 |         35 |          0 |          7 |         42 |
++--------------------------------------------------------------------------------------------------------------------+------------+------------+------------+------------+------------+
+
+Files
++--------------------------------------------------------------------------------------------------------------------+--------------------+------------+------------+------------+------------+
+| filename                                                                                                           | language           | code       | comment    | blank      | total      |
++--------------------------------------------------------------------------------------------------------------------+--------------------+------------+------------+------------+------------+
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\README.md                                                               | Markdown           |         49 |          0 |         20 |         69 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\pom.xml                                                                 | XML                |        100 |         19 |         10 |        129 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\MahjongApplication.java               | Java               |         13 |          0 |          3 |         16 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\common\JwtAuthInterceptor.java        | Java               |         68 |         12 |         15 |         95 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\common\JwtUtil.java                   | Java               |         93 |         19 |         28 |        140 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\common\Result.java                    | Java               |         21 |          0 |          4 |         25 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\config\JwtConfig.java                 | Java               |         21 |          0 |          7 |         28 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\config\WebConfig.java                 | Java               |         27 |          2 |          9 |         38 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\controller\AuthController.java        | Java               |        127 |         28 |         42 |        197 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\controller\GameController.java        | Java               |        206 |         49 |         72 |        327 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\controller\HelloController.java       | Java               |         10 |          0 |          3 |         13 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\controller\RoomController.java        | Java               |        225 |         50 |         72 |        347 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\entity\Game.java                      | Java               |         23 |          0 |          2 |         25 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\entity\PlayerGame.java                | Java               |         20 |          0 |          2 |         22 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\entity\Room.java                      | Java               |         18 |          0 |          2 |         20 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\entity\RoomDTO.java                   | Java               |         18 |          0 |          2 |         20 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\entity\User.java                      | Java               |         12 |          0 |          2 |         14 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\entity\UserDTO.java                   | Java               |          8 |          0 |          2 |         10 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\exception\GlobalExceptionHandler.java | Java               |         21 |          7 |          5 |         33 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\mapper\GameMapper.java                | Java               |         23 |         12 |          7 |         42 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\mapper\PlayerGameMapper.java          | Java               |         29 |         18 |         10 |         57 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\mapper\RoomMapper.java                | Java               |         30 |         15 |          9 |         54 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\mapper\UserMapper.java                | Java               |         16 |         12 |          7 |         35 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\service\GameService.java              | Java               |         19 |         36 |         15 |         70 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\service\RoomService.java              | Java               |         14 |         21 |         10 |         45 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\service\UserService.java              | Java               |         13 |         24 |         10 |         47 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\service\impl\GameServiceImpl.java     | Java               |        365 |         78 |         98 |        541 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\service\impl\RoomServiceImpl.java     | Java               |        142 |         26 |         44 |        212 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\java\com\example\mahjong\service\impl\UserServiceImpl.java     | Java               |         97 |         17 |         30 |        144 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\resources\application.yml                                      | YAML               |         22 |          0 |          3 |         25 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\resources\init.sql                                             | MS SQL             |        204 |          1 |         17 |        222 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\main\resources\test_data.sql                                        | MS SQL             |         93 |         15 |         14 |        122 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_backend\src\test\java\com\example\hello\HelloApplicationTest.java               | Java               |          3 |          0 |          2 |          5 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\README.md                                                              | Markdown           |          3 |          0 |          3 |          6 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\index.html                                                             | HTML               |         13 |          0 |          1 |         14 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\package-lock.json                                                      | JSON               |      1,361 |          0 |          1 |      1,362 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\package.json                                                           | JSON               |         21 |          0 |          1 |         22 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\public\vite.svg                                                        | XML                |          1 |          0 |          0 |          1 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\src\App.vue                                                            | vue                |         28 |          0 |          3 |         31 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\src\assets\vue.svg                                                     | XML                |          1 |          0 |          0 |          1 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\src\components\HelloWorld.vue                                          | vue                |         35 |          0 |          7 |         42 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\src\main.ts                                                            | TypeScript         |          4 |          0 |          2 |          6 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\src\style.css                                                          | CSS                |         70 |          0 |         10 |         80 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\src\vite-env.d.ts                                                      | TypeScript         |          0 |          1 |          1 |          2 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\tsconfig.app.json                                                      | JSON               |         12 |          1 |          2 |         15 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\tsconfig.json                                                          | JSON with Comments |          7 |          0 |          1 |          8 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\tsconfig.node.json                                                     | JSON               |         20 |          2 |          3 |         25 |
+| d:\吾日三省吾身\项目开发\mahjong_all\mahjong_frontend\vite.config.ts                                                         | TypeScript         |          5 |          1 |          2 |          8 |
+| Total                                                                                                              |                    |      3,731 |        466 |        615 |      4,812 |
++--------------------------------------------------------------------------------------------------------------------+--------------------+------------+------------+------------+------------+

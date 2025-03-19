@@ -7,19 +7,63 @@ server:
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/mahjong?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://localhost:3306/mahjong?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: root
     password: 200451
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: GMT+8
+    serialization:
+      fail-on-empty-beans: false
+    deserialization:
+      fail-on-unknown-properties: false
+  sql:
+    init:
+      mode: never
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
-  type-aliases-package: com.example.hello.entity
+  type-aliases-package: com.example.mahjong.entity
   configuration:
     map-underscore-to-camel-case: true
+    default-fetch-size: 100
+    default-statement-timeout: 30
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+    # 调用参数名称
+    use-actual-param-name: true
+    # 启用自动生成键
+    use-generated-keys: true
+    # 启用延迟加载
+    lazy-loading-enabled: true
+    # 关闭积极的懒加载
+    aggressive-lazy-loading: false
+
+logging:
+  level:
+    root: INFO
+    com.example.mahjong: DEBUG
+    org.mybatis: DEBUG
+    org.springdoc: INFO
 
 jwt:
   secret: mahjong-game-secret-key-for-jwt-token-generation-and-validation
-  expiration: 86400000  # 24小时，单位毫秒 
+  expiration: 86400000  # 24小时，单位毫秒
+
+# SpringDoc OpenAPI配置
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operationsSorter: method
+    tagsSorter: alpha
+    disable-swagger-default-url: true
+    disable-auth-configuration: true
+  show-actuator: false
+  default-produces-media-type: application/json
+  default-consumes-media-type: application/json
+  packages-to-scan: com.example.mahjong.controller
