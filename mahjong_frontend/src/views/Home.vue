@@ -7,92 +7,30 @@
     <div class="login-section">
       <h2 class="login-title">游客登录</h2>
       
-      <!-- API状态提示 -->
-      <div class="api-status" :class="{ 'api-connected': apiConnected, 'api-disconnected': !apiConnected }">
-        <div class="status-text">{{ apiStatus }}</div>
-        
-        <div v-if="apiConnected && apiDetails" class="api-details">
-          <div><strong>服务名称:</strong> {{ apiDetails.service }}</div>
-          <div><strong>版本:</strong> {{ apiDetails.version }}</div>
-          <div><strong>服务器时间:</strong> {{ apiDetails.timestamp }}</div>
-        </div>
-        
-        <div v-if="!apiConnected && apiTestResults" class="api-error-details">
-          <el-button type="text" @click="toggleDetailedResults" class="details-toggle">
-            {{ showDetailedResults ? '隐藏详细信息' : '显示详细信息' }}
-          </el-button>
-          
-          <div v-if="showDetailedResults" class="detailed-results">
-            <div class="test-result">
-              <div><strong>健康检查:</strong> {{ apiTestResults.health?.ok ? '成功' : '失败' }}</div>
-              <div v-if="!apiTestResults.health?.ok">
-                {{ apiTestResults.health?.error || `${apiTestResults.health?.status} ${apiTestResults.health?.statusText}` }}
-              </div>
-            </div>
-            
-            <div class="test-result">
-              <div><strong>游客登录端点:</strong> {{ apiTestResults.guest?.ok ? '成功' : '失败' }}</div>
-              <div v-if="!apiTestResults.guest?.ok">
-                {{ apiTestResults.guest?.error || `${apiTestResults.guest?.status} ${apiTestResults.guest?.statusText}` }}
-              </div>
-            </div>
-            
-            <div class="test-result">
-              <div><strong>昵称检查端点:</strong> {{ apiTestResults.checkNickname?.ok ? '成功' : '失败' }}</div>
-              <div v-if="!apiTestResults.checkNickname?.ok">
-                {{ apiTestResults.checkNickname?.error || `${apiTestResults.checkNickname?.status} ${apiTestResults.checkNickname?.statusText}` }}
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div class="api-actions">
-          <el-button v-if="!apiTestInProgress" 
-                    type="primary" 
-                    size="small" 
-                    @click="checkApiConnection" 
-                    class="action-button">
-            重试连接
-          </el-button>
-          
-          <el-button type="warning" 
-                    size="small" 
-                    @click="testDirectApi" 
-                    class="action-button">
-            直接测试API
-          </el-button>
-          
-          <el-button 
-            :type="mockApiEnabled ? 'success' : 'info'" 
-            size="small" 
-            @click="toggleMockApi" 
-            class="action-button">
-            {{ mockApiEnabled ? '已启用模拟API' : '启用模拟API' }}
-          </el-button>
-        </div>
-        
-        <!-- API测试结果 -->
-        <div v-if="directTestResult" class="direct-test-result">
-          <div><strong>测试结果:</strong> {{ directTestResult.success ? '成功' : '失败' }}</div>
-          <div><strong>状态码:</strong> {{ directTestResult.status }}</div>
-          <div v-if="directTestResult.data">
-            <strong>数据:</strong> 
-            <pre>{{ JSON.stringify(directTestResult.data, null, 2) }}</pre>
-          </div>
-          <div v-if="directTestResult.error">
-            <strong>错误:</strong> {{ directTestResult.error }}
-          </div>
-        </div>
+      <!-- 后端连接状态提示 -->
+      <div v-if="showConnectionAlert" class="connection-alert">
+        <el-alert
+          :title="connectionAlertMessage"
+          :type="connectionAlertType"
+          :closable="true"
+          @close="closeConnectionAlert"
+          show-icon
+        >
+          <template #default>
+            <p>可尝试点击按钮，错误可能会被自动处理</p>
+            <el-button type="text" @click="showHelpDialog">查看连接问题帮助</el-button>
+          </template>
+        </el-alert>
       </div>
       
       <div class="button-group">
-        <el-button type="success" class="login-button" @click="guestLogin" :disabled="!apiConnected && !mockApiEnabled">
+        <el-button type="success" class="login-button" @click="guestLogin">
           游客登录
         </el-button>
-        <el-button type="primary" class="login-button" @click="showRegisterDialog" :disabled="!apiConnected && !mockApiEnabled">
+        <el-button type="primary" class="login-button" @click="showRegisterDialog">
           注册新ID并登录
         </el-button>
-        <el-button type="primary" class="login-button" @click="showLoginDialog" :disabled="!apiConnected && !mockApiEnabled">
+        <el-button type="primary" class="login-button" @click="showLoginDialog">
           使用已有ID登录
         </el-button>
       </div>
@@ -203,6 +141,49 @@
         </span>
       </template>
     </el-dialog>
+
+    <!-- 连接问题帮助对话框 -->
+    <el-dialog
+      v-model="helpDialogVisible"
+      title="连接问题帮助"
+      width="50%"
+      center
+    >
+      <div class="help-content">
+        <h3>后端连接问题解决方案</h3>
+        <p>您遇到的问题可能是因为后端服务未启动或者存在跨域资源共享(CORS)问题。</p>
+        
+        <h4>1. 检查后端服务是否已启动</h4>
+        <p>请确保后端服务已经在本地启动，并在端口8080上运行。您可以通过以下步骤检查：</p>
+        <ul>
+          <li>打开命令行终端</li>
+          <li>导航到后端项目目录</li>
+          <li>执行启动命令：<code>mvn spring-boot:run</code> 或启动Spring Boot应用</li>
+          <li>确认控制台显示服务已在端口8080启动</li>
+        </ul>
+        
+        <h4>2. 检查跨域资源共享(CORS)配置</h4>
+        <p>如果后端服务已启动但仍然无法连接，可能是CORS配置问题。您可以：</p>
+        <ul>
+          <li>检查后端WebConfig.java中的CORS配置</li>
+          <li>确保allowedOrigins包含了前端应用的URL (例如 http://localhost:5174)</li>
+          <li>确保配置了正确的allowedMethods和allowedHeaders</li>
+        </ul>
+        
+        <h4>3. 检查JWT拦截器配置</h4>
+        <p>从错误日志看，可能是JWT拦截器拦截了游客登录请求。可以检查：</p>
+        <ul>
+          <li>确保/auth/guest路径已在JwtAuthInterceptor的excludePathPatterns中排除</li>
+          <li>前端请求中是否正确设置了CORS相关的头信息</li>
+          <li>确保OPTIONS预检请求也被正确处理</li>
+        </ul>
+      </div>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button type="primary" @click="helpDialogVisible = false">我知道了</el-button>
+        </span>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -210,8 +191,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { get, post, testApiConnection, fallbackTestApiConnection, comprehensiveApiTest, API_BASE_URL, tokenUtils } from '../utils/api'
-import { ENABLE_MOCK_API, setMockApiEnabled } from '../utils/mockApi'
+import { get, post, API_BASE_URL, tokenUtils } from '../utils/api'
 
 // 定义API测试结果的类型
 interface ApiTestResult {
@@ -262,14 +242,29 @@ const confirmDialogVisible = ref(false)
 const successDialogVisible = ref(false)
 const failDialogVisible = ref(false)
 const loginDialogVisible = ref(false)
+const helpDialogVisible = ref(false)
 
 // 表单数据
 const nickname = ref('')
 const userId = ref('')
 const isValidUserId = ref(false)
 
-// 模拟API状态
-const mockApiEnabled = ref(ENABLE_MOCK_API)
+// 连接提示相关
+const showConnectionAlert = ref(false)
+const connectionAlertMessage = ref('连接到服务器失败，请确保后端服务已启动')
+const connectionAlertType = ref('warning')
+
+// 关闭连接提示
+const closeConnectionAlert = () => {
+  showConnectionAlert.value = false
+}
+
+// 显示连接错误提示
+const showConnectionError = (message?: string) => {
+  connectionAlertMessage.value = message || '连接到服务器失败，请确保后端服务已启动'
+  connectionAlertType.value = 'error'
+  showConnectionAlert.value = true
+}
 
 // 在组件挂载时检查API连接
 onMounted(async () => {
@@ -285,32 +280,112 @@ const checkApiConnection = async () => {
   showDetailedResults.value = false
   
   try {
-    // 使用综合测试
-    const results = await comprehensiveApiTest()
+    // 先尝试直接检查是否可以访问后端
+    const response = await fetch(`${API_BASE_URL}/health`, {
+      method: 'GET',
+      mode: 'cors',
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json'
+      },
+      // 设置较短的超时时间
+      signal: AbortSignal.timeout(3000) // 3秒超时
+    })
+    
+    // 一个简单的结果对象
+    const results: ComprehensiveTestResult = {
+      health: {
+        ok: response.ok || response.status === 401, // 401也认为是成功
+        status: response.status,
+        statusText: response.statusText
+      },
+      guest: null as any,
+      checkNickname: null as any,
+      overall: response.ok || response.status === 401
+    }
+    
     apiTestResults.value = results
     
     if (results.overall) {
-      apiStatus.value = '后端API连接正常'
-      apiConnected.value = true
-      
-      // 如果健康检查成功并有数据，保存详情
-      if (results.health && results.health.ok && results.health.data && results.health.data.data) {
+      // 对于401错误的特殊处理
+      if (response.status === 401) {
+        apiStatus.value = '后端API连接正常 (JWT认证)'
+        apiConnected.value = true
+        
+        // 设置基本API详情
         apiDetails.value = {
-          service: results.health.data.data.service || 'Mahjong Game API',
-          version: results.health.data.data.version || '1.0.0',
-          timestamp: results.health.data.data.timestamp || new Date().toLocaleString(),
-          status: results.health.data.data.status || 'UP'
+          service: 'Mahjong Game API',
+          version: '1.0.0',
+          timestamp: new Date().toLocaleString(),
+          status: 'PROTECTED'
+        }
+      } else {
+        apiStatus.value = '后端API连接正常'
+        apiConnected.value = true
+        
+        // 如果是200，尝试解析响应数据
+        try {
+          const responseData = await response.json()
+          if (responseData && responseData.data) {
+            apiDetails.value = {
+              service: responseData.data.service || 'Mahjong Game API',
+              version: responseData.data.version || '1.0.0',
+              timestamp: responseData.data.timestamp || new Date().toLocaleString(),
+              status: responseData.data.status || 'UP'
+            }
+          }
+        } catch (e) {
+          console.warn('无法解析健康检查响应数据', e)
+          // 默认值
+          apiDetails.value = {
+            service: 'Mahjong Game API',
+            version: '1.0.0',
+            timestamp: new Date().toLocaleString(),
+            status: 'UP'
+          }
         }
       }
     } else {
       apiStatus.value = '后端API连接失败'
       apiConnected.value = false
-      ElMessage.warning(`无法连接到后端API (${API_BASE_URL})，请确保后端服务已启动`)
+      
+      // 显示连接警告
+      showConnectionAlert.value = true
+      connectionAlertMessage.value = `后端服务连接问题: HTTP ${response.status} ${response.statusText}`
     }
   } catch (error: any) {
+    console.error('API连接检查错误:', error)
     apiStatus.value = `后端API连接错误: ${error.message}`
     apiConnected.value = false
-    ElMessage.error('检查API连接时发生错误')
+    
+    // 显示连接错误
+    showConnectionError(error.message)
+    
+    // 尝试进行额外的诊断
+    try {
+      // 简单测试游客登录端点
+      const fallbackResponse = await fetch(`${API_BASE_URL}/auth/guest`, {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'include',
+        headers: {
+          'Accept': 'application/json'
+        },
+        signal: AbortSignal.timeout(2000) // 2秒超时
+      })
+      
+      if (fallbackResponse.ok || fallbackResponse.status === 401) {
+        // 如果这个成功了但主健康检查失败，可能是健康检查端点有问题
+        apiConnected.value = true
+        apiStatus.value = '后端API可能在线，但健康检查失败'
+        // 减轻错误消息的严重性
+        connectionAlertType.value = 'warning'
+        connectionAlertMessage.value = '后端服务可能已启动，但健康检查失败。您可以尝试登录。'
+      }
+    } catch (fallbackError) {
+      // 忽略后备测试的错误
+      console.warn('后备连接测试也失败了', fallbackError)
+    }
   } finally {
     apiTestInProgress.value = false
   }
@@ -323,30 +398,30 @@ const toggleDetailedResults = () => {
 
 // 游客登录
 const guestLogin = async () => {
-  if (!apiConnected.value && !mockApiEnabled.value) {
-    ElMessage.warning('后端API未连接，无法登录')
-    return
-  }
-  
   try {
     // 显示加载状态
     const loading = ElMessage({
-      message: '正在登录...',
+      message: '正在游客登录...',
       type: 'info',
       duration: 0
     })
     
-    const data = await post('/users/guest')
+    const data = await post('/auth/guest')
     
     // 关闭加载提示
     loading.close()
     
+    // 关闭连接警告（如果存在）
+    showConnectionAlert.value = false
+    
     if (data.code === 200) {
+      // 登录成功
+      
       // 保存令牌和用户信息
       tokenUtils.setToken(data.data.token);
       tokenUtils.setUserInfo(data.data.id, data.data.nickname);
       
-      ElMessage.success('登录成功')
+      ElMessage.success(`游客登录成功，您的ID为: ${data.data.id}`)
       
       // 导航到游戏主界面
       router.push('/game')
@@ -355,17 +430,20 @@ const guestLogin = async () => {
     }
   } catch (error: any) {
     console.error('游客登录错误:', error)
-    ElMessage.error(`登录失败: ${error.message}`)
+    
+    // 处理CORS错误
+    if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+      showConnectionError('连接到服务器失败，请确保后端服务已启动')
+    } else if (error.message && error.message.includes('cors')) {
+      showConnectionError('跨域请求被拒绝，这可能是服务器CORS配置问题')
+    } else {
+      ElMessage.error(`登录失败: ${error.message}`)
+    }
   }
 }
 
 // 显示注册对话框
 const showRegisterDialog = () => {
-  if (!apiConnected.value) {
-    ElMessage.warning('后端API未连接，无法注册')
-    return
-  }
-  
   nickname.value = ''
   registerDialogVisible.value = true
 }
@@ -391,10 +469,15 @@ const confirmNickname = async () => {
     })
     
     // 检查昵称是否可用
-    const data = await get(`/users/check-nickname/${encodeURIComponent(nickname.value)}`)
+    const data = await get(`/auth/check-nickname/${encodeURIComponent(nickname.value)}`)
     
     // 关闭加载提示
     loading.close()
+    
+    // 成功连接，关闭警告
+    showConnectionAlert.value = false
+    
+    console.log('昵称检查结果:', data)
     
     if (data.code === 200) {
       if (data.data === true) {
@@ -410,7 +493,15 @@ const confirmNickname = async () => {
     }
   } catch (error: any) {
     console.error('检查昵称错误:', error)
-    ElMessage.error(`检查昵称失败: ${error.message}`)
+    
+    // 处理CORS错误
+    if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+      showConnectionError('连接到服务器失败，请确保后端服务已启动')
+    } else if (error.message && error.message.includes('cors')) {
+      showConnectionError('跨域请求被拒绝，这可能是服务器CORS配置问题')
+    } else {
+      ElMessage.error(`检查昵称失败: ${error.message}`)
+    }
   }
 }
 
@@ -431,10 +522,13 @@ const createUser = async () => {
       duration: 0
     })
     
-    const data = await post('/users', { nickname: nickname.value })
+    const data = await post('/auth/register', { nickname: nickname.value })
     
     // 关闭加载提示
     loading.close()
+    
+    // 成功连接，关闭警告
+    showConnectionAlert.value = false
     
     confirmDialogVisible.value = false
     
@@ -455,7 +549,16 @@ const createUser = async () => {
     }
   } catch (error: any) {
     console.error('创建用户错误:', error)
-    ElMessage.error(`创建用户失败: ${error.message}`)
+    
+    // 处理CORS错误
+    if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+      showConnectionError('连接到服务器失败，请确保后端服务已启动')
+    } else if (error.message && error.message.includes('cors')) {
+      showConnectionError('跨域请求被拒绝，这可能是服务器CORS配置问题')
+    } else {
+      ElMessage.error(`创建用户失败: ${error.message}`)
+    }
+    
     confirmDialogVisible.value = false
   }
 }
@@ -468,11 +571,6 @@ const enterGame = () => {
 
 // 显示登录对话框
 const showLoginDialog = () => {
-  if (!apiConnected.value) {
-    ElMessage.warning('后端API未连接，无法登录')
-    return
-  }
-  
   userId.value = ''
   isValidUserId.value = false
   loginDialogVisible.value = true
@@ -498,10 +596,13 @@ const login = async () => {
       duration: 0
     })
     
-    const data = await post('/users/login', { id: parseInt(userId.value) })
+    const data = await post('/auth/login', { id: parseInt(userId.value) })
     
     // 关闭加载提示
     loading.close()
+    
+    // 成功连接，关闭警告
+    showConnectionAlert.value = false
     
     if (data.code === 200) {
       // 登录成功
@@ -511,7 +612,7 @@ const login = async () => {
       tokenUtils.setToken(data.data.token);
       tokenUtils.setUserInfo(data.data.id, data.data.nickname);
       
-      ElMessage.success('登录成功')
+      ElMessage.success(`登录成功，欢迎回来 ${data.data.nickname}`)
       
       // 导航到游戏主界面
       router.push('/game')
@@ -522,7 +623,15 @@ const login = async () => {
     }
   } catch (error: any) {
     console.error('登录错误:', error)
-    ElMessage.error(`登录失败: ${error.message}`)
+    
+    // 处理CORS错误
+    if (error.message && (error.message.includes('Failed to fetch') || error.message.includes('NetworkError'))) {
+      showConnectionError('连接到服务器失败，请确保后端服务已启动')
+    } else if (error.message && error.message.includes('cors')) {
+      showConnectionError('跨域请求被拒绝，这可能是服务器CORS配置问题')
+    } else {
+      ElMessage.error(`登录失败: ${error.message}`)
+    }
   }
 }
 
@@ -581,20 +690,9 @@ const testDirectApi = async () => {
   }
 };
 
-// 切换模拟API
-const toggleMockApi = () => {
-  const newState = !mockApiEnabled.value
-  mockApiEnabled.value = newState
-  setMockApiEnabled(newState)
-  
-  if (newState) {
-    apiConnected.value = true
-    apiStatus.value = '使用模拟API (后端连接失败)'
-    ElMessage.success('已启用模拟API，可以继续使用应用')
-  } else {
-    // 重新检查API连接
-    checkApiConnection()
-  }
+// 显示连接问题帮助对话框
+const showHelpDialog = () => {
+  helpDialogVisible.value = true
 }
 </script>
 
@@ -652,107 +750,6 @@ const toggleMockApi = () => {
   width: 50px;
   height: 2px;
   background-color: #4CAF50;
-}
-
-.api-status {
-  margin-bottom: 20px;
-  padding: 15px;
-  border-radius: 4px;
-  text-align: center;
-  font-size: 0.9rem;
-  width: 100%;
-  max-width: 400px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-}
-
-.status-text {
-  font-weight: bold;
-  margin-bottom: 5px;
-}
-
-.api-details {
-  font-size: 0.8rem;
-  text-align: left;
-  background-color: rgba(255, 255, 255, 0.7);
-  padding: 8px 12px;
-  border-radius: 4px;
-  width: 100%;
-}
-
-.api-error-details {
-  width: 100%;
-  text-align: center;
-}
-
-.details-toggle {
-  font-size: 0.8rem;
-  margin: 5px 0;
-}
-
-.detailed-results {
-  background-color: rgba(255, 255, 255, 0.7);
-  padding: 10px;
-  border-radius: 4px;
-  text-align: left;
-  font-size: 0.8rem;
-  margin-top: 5px;
-}
-
-.test-result {
-  margin-bottom: 8px;
-  padding-bottom: 8px;
-  border-bottom: 1px dashed #ddd;
-}
-
-.test-result:last-child {
-  margin-bottom: 0;
-  padding-bottom: 0;
-  border-bottom: none;
-}
-
-.api-connected {
-  background-color: #f0f9eb;
-  color: #67c23a;
-  border: 1px solid #e1f3d8;
-}
-
-.api-disconnected {
-  background-color: #fef0f0;
-  color: #f56c6c;
-  border: 1px solid #fde2e2;
-}
-
-.api-actions {
-  display: flex;
-  gap: 10px;
-  margin-top: 10px;
-}
-
-.action-button {
-  min-width: 100px;
-}
-
-.direct-test-result {
-  margin-top: 15px;
-  background-color: #f5f5f5;
-  padding: 10px;
-  border-radius: 4px;
-  text-align: left;
-  font-size: 0.8rem;
-  width: 100%;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.direct-test-result pre {
-  background-color: #eee;
-  padding: 5px;
-  border-radius: 3px;
-  overflow-x: auto;
-  margin: 5px 0;
 }
 
 .button-group {
@@ -840,4 +837,89 @@ const toggleMockApi = () => {
     font-size: 3.5rem;
   }
 }
-</style> 
+
+.backend-error {
+  margin-top: 10px;
+  width: 100%;
+  text-align: center;
+}
+
+.error-action {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+.test-result-status {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin: 10px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.test-success {
+  color: #67c23a;
+}
+
+.test-fail {
+  color: #f56c6c;
+}
+
+.test-error {
+  color: #f56c6c;
+  background-color: #fef0f0;
+  padding: 5px;
+  border-radius: 4px;
+  margin-top: 5px;
+}
+
+.error-details {
+  margin: 10px 0;
+  font-size: 0.9rem;
+}
+
+.error-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 10px;
+}
+
+.api-error-details {
+  margin-top: 10px;
+  text-align: center;
+  width: 100%;
+}
+
+.connection-alert {
+  margin-bottom: 10px;
+  width: 100%;
+  text-align: center;
+}
+
+.help-content {
+  text-align: left;
+  padding: 20px;
+}
+
+.help-content h3 {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+
+.help-content p {
+  margin-bottom: 10px;
+}
+
+.help-content ul {
+  margin-left: 20px;
+  margin-bottom: 10px;
+}
+
+.help-content li {
+  margin-bottom: 5px;
+}
+</style>

@@ -1,7 +1,6 @@
 // API基础URL
-import { ENABLE_MOCK_API, mockApiFunctions, mockGetUserInfo } from './mockApi';
 
-export const API_BASE_URL = 'http://localhost:8080/api'
+export const API_BASE_URL = 'http://localhost:8080'
 
 /**
  * 获取JWT令牌相关函数
@@ -86,31 +85,37 @@ export const tokenUtils = {
 };
 
 /**
+ * 获取请求头
+ * @returns Headers对象
+ */
+function getHeaders() {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    // 添加CORS相关头
+    'Origin': window.location.origin,
+    'Access-Control-Request-Method': 'GET, POST, OPTIONS',
+    'Access-Control-Request-Headers': 'Content-Type, Accept, Authorization'
+  }
+  
+  // 添加认证令牌
+  const token = tokenUtils.getToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`
+  }
+  
+  return headers
+}
+
+/**
  * 发送GET请求
  * @param url 请求URL
  * @param params 查询参数
  * @returns Promise
  */
 export async function get(url: string, params?: Record<string, any>) {
-  // 如果启用了模拟API，并且存在对应的模拟函数
-  if (ENABLE_MOCK_API) {
-    const mockFn = getMockFunction(url);
-    if (mockFn) {
-      console.log(`使用模拟API (GET): ${url}`, params);
-      // 模拟网络延迟
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // 如果是检查昵称接口，特殊处理
-      if (url.startsWith('/users/check-nickname/')) {
-        const nickname = url.split('/').pop() || '';
-        return mockFn(nickname);
-      }
-      
-      return mockFn();
-    }
-  }
-  
   const queryString = params ? `?${new URLSearchParams(params).toString()}` : ''
+  // 直接使用原始URL，不再检查/api前缀
   const fullUrl = `${API_BASE_URL}${url}${queryString}`
   
   console.log(`发送GET请求: ${fullUrl}`)
@@ -120,6 +125,23 @@ export async function get(url: string, params?: Record<string, any>) {
     
     // 添加请求开始时间
     const startTime = new Date().getTime()
+    
+    // 首先发送一个预检请求
+    try {
+      await fetch(fullUrl, {
+        method: 'OPTIONS',
+        headers: {
+          'Origin': window.location.origin,
+          'Access-Control-Request-Method': 'GET',
+          'Access-Control-Request-Headers': 'Content-Type, Accept, Authorization'
+        },
+        mode: 'cors',
+        credentials: 'include'
+      })
+    } catch (e) {
+      // 忽略预检请求的错误，继续发送实际请求
+      console.warn('预检请求失败，继续发送实际请求', e)
+    }
     
     const response = await fetch(fullUrl, {
       method: 'GET',
@@ -161,25 +183,7 @@ export async function get(url: string, params?: Record<string, any>) {
  * @returns Promise
  */
 export async function post(url: string, data?: any) {
-  // 如果启用了模拟API，并且存在对应的模拟函数
-  if (ENABLE_MOCK_API) {
-    const mockFn = getMockFunction(url);
-    if (mockFn) {
-      console.log(`使用模拟API (POST): ${url}`, data);
-      // 模拟网络延迟
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // 根据不同接口处理数据
-      if (url === '/users') {
-        return mockFn(data?.nickname);
-      } else if (url === '/users/login') {
-        return mockFn(data?.id);
-      }
-      
-      return mockFn();
-    }
-  }
-  
+  // 直接使用原始URL，不再检查/api前缀
   const fullUrl = `${API_BASE_URL}${url}`
   
   console.log(`发送POST请求: ${fullUrl}`, data)
@@ -189,6 +193,23 @@ export async function post(url: string, data?: any) {
     
     // 添加请求开始时间
     const startTime = new Date().getTime()
+    
+    // 首先发送一个预检请求
+    try {
+      await fetch(fullUrl, {
+        method: 'OPTIONS',
+        headers: {
+          'Origin': window.location.origin,
+          'Access-Control-Request-Method': 'POST',
+          'Access-Control-Request-Headers': 'Content-Type, Accept, Authorization'
+        },
+        mode: 'cors',
+        credentials: 'include'
+      })
+    } catch (e) {
+      // 忽略预检请求的错误，继续发送实际请求
+      console.warn('预检请求失败，继续发送实际请求', e)
+    }
     
     const response = await fetch(fullUrl, {
       method: 'POST',
@@ -222,25 +243,6 @@ export async function post(url: string, data?: any) {
     console.error(`POST请求错误 (${fullUrl}):`, error)
     throw error
   }
-}
-
-/**
- * 获取请求头
- * @returns Headers对象
- */
-function getHeaders() {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json'
-  }
-  
-  // 添加认证令牌
-  const token = tokenUtils.getToken();
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`
-  }
-  
-  return headers
 }
 
 /**
@@ -353,7 +355,7 @@ export async function testApiConnection() {
 export async function fallbackTestApiConnection() {
   try {
     // 尝试使用游客登录端点作为备用
-    const response = await fetch(`${API_BASE_URL}/users/guest`, {
+    const response = await fetch(`${API_BASE_URL}/auth/guest`, {
       method: 'OPTIONS',
       mode: 'cors',
       credentials: 'include',
@@ -419,7 +421,7 @@ export async function comprehensiveApiTest() {
     
     // 测试昵称检查端点
     try {
-      const response = await fetch(`${API_BASE_URL}/users/check-nickname/test`, {
+      const response = await fetch(`${API_BASE_URL}/auth/check-nickname/test`, {
         method: 'GET',
         mode: 'cors',
         credentials: 'include',
@@ -451,23 +453,4 @@ export async function comprehensiveApiTest() {
       error: error.message
     };
   }
-}
-
-/**
- * 获取对应URL的模拟函数
- */
-function getMockFunction(url: string) {
-  // 精确匹配
-  if (url in mockApiFunctions) {
-    return mockApiFunctions[url];
-  }
-  
-  // 前缀匹配
-  for (const key in mockApiFunctions) {
-    if (url.startsWith(key)) {
-      return mockApiFunctions[key];
-    }
-  }
-  
-  return null;
 } 

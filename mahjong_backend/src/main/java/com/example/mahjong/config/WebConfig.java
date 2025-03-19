@@ -2,6 +2,7 @@ package com.example.mahjong.config;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
@@ -19,6 +20,20 @@ public class WebConfig implements WebMvcConfigurer {
     @Autowired
     private JwtAuthInterceptor jwtAuthInterceptor;
     
+    // 添加CORS配置
+    @Override
+    public void addCorsMappings(CorsRegistry registry) {
+        logger.info("配置CORS跨域");
+        registry.addMapping("/**")
+                .allowedOrigins("http://localhost:5174") // 明确指定前端开发服务器地址
+                .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
+                .allowedHeaders("Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With", "Access-Control-Request-Method", "Access-Control-Request-Headers")
+                .exposedHeaders("Access-Control-Allow-Origin", "Access-Control-Allow-Credentials")
+                .allowCredentials(true) // 允许发送Cookie
+                .maxAge(3600L); // 1小时内不再预检
+        logger.info("CORS配置完成，允许来自http://localhost:5174的请求");
+    }
+    
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         logger.info("配置JWT拦截器");
@@ -28,6 +43,7 @@ public class WebConfig implements WebMvcConfigurer {
                 .addPathPatterns("/**")
                 .excludePathPatterns(
                     "/",              // 排除根路径
+                    "/health",        // 排除健康检查路径
                     "/auth/**",       // 排除登录注册等不需要认证的路径
                     "/error",         // 排除错误页面
                     "/swagger-ui/**", // 排除swagger-ui路径
