@@ -25,6 +25,12 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
         String uri = request.getRequestURI();
         logger.info("JWT拦截器处理请求: " + method + " " + uri);
         
+        // 特殊处理OPTIONS请求（预检请求），直接放行
+        if (method.equals("OPTIONS")) {
+            logger.info("OPTIONS预检请求，不需要认证，直接放行");
+            return true;
+        }
+        
         // 特殊处理GET /rooms请求
         if (uri.equals("/rooms") && method.equals("GET")) {
             logger.info("GET /rooms 请求，不需要认证，直接放行");

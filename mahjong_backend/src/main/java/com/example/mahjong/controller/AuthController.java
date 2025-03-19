@@ -11,10 +11,13 @@ import com.example.mahjong.service.UserService;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
+
+    private static final Logger logger = Logger.getLogger(AuthController.class.getName());
 
     @Autowired
     private UserService userService;
@@ -23,17 +26,87 @@ public class AuthController {
     private JwtUtil jwtUtil;
 
     /**
-     * 用户登录
+     * 响应OPTIONS预检请求
+     */
+    @RequestMapping(value = "/**", method = RequestMethod.OPTIONS)
+    public ResponseEntity<?> handleOptions() {
+        logger.info("处理OPTIONS预检请求");
+        return ResponseEntity.ok().build();
+    }
+
+    /**
+     * 使用昵称登录
      */
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@RequestBody Map<String, Object> params) {
         Map<String, Object> response = new HashMap<>();
         
         try {
-            String nickname = (String) params.get("nickname");
+            // 支持使用ID或昵称登录
+            if (params.containsKey("id")) {
+                Long userId = Long.valueOf(params.get("id").toString());
+                return loginById(userId);
+            } else if (params.containsKey("nickname")) {
+                String nickname = (String) params.get("nickname");
+                
+                // 查询用户
+                User user = userService.getUserByNickname(nickname);
+                
+                // 如果用户不存在，返回错误
+                if (user == null) {
+                    response.put("code", 404);
+                    response.put("msg", "用户不存在");
+                    response.put("data", null);
+                    
+                    return ResponseEntity.status(404).body(response);
+                }
+                
+                // 更新最后登录时间
+                user.setLastLoginTime(LocalDateTime.now());
+                userService.updateUser(user);
+                
+                // 生成JWT令牌
+                String token = jwtUtil.generateToken(user);
+                
+                // 构建响应
+                Map<String, Object> data = new HashMap<>();
+                data.put("token", token);
+                data.put("id", user.getId());
+                data.put("nickname", user.getNickname());
+                
+                response.put("code", 200);
+                response.put("msg", "登录成功");
+                response.put("data", data);
+                
+                return ResponseEntity.ok(response);
+            } else {
+                response.put("code", 400);
+                response.put("msg", "请提供用户ID或昵称");
+                response.put("data", null);
+                
+                return ResponseEntity.badRequest().body(response);
+            }
+        } catch (Exception e) {
+            logger.severe("登录失败：" + e.getMessage());
+            e.printStackTrace();
             
+            response.put("code", 500);
+            response.put("msg", "登录失败：" + e.getMessage());
+            response.put("data", null);
+            
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+    
+    /**
+     * 使用ID登录
+     */
+    private ResponseEntity<Map<String, Object>> loginById(Long userId) {
+        Map<String, Object> response = new HashMap<>();
+        
+        try {
             // 查询用户
-            User user = userService.getUserByNickname(nickname);
+            User user = userService.getUserById(userId);
             
             // 如果用户不存在，返回错误
             if (user == null) {
@@ -54,7 +127,7 @@ public class AuthController {
             // 构建响应
             Map<String, Object> data = new HashMap<>();
             data.put("token", token);
-            data.put("user_id", user.getId());
+            data.put("id", user.getId());
             data.put("nickname", user.getNickname());
             
             response.put("code", 200);
@@ -63,6 +136,9 @@ public class AuthController {
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            logger.severe("ID登录失败：" + e.getMessage());
+            e.printStackTrace();
+            
             response.put("code", 500);
             response.put("msg", "登录失败：" + e.getMessage());
             response.put("data", null);
@@ -108,7 +184,7 @@ public class AuthController {
             // 构建响应
             Map<String, Object> data = new HashMap<>();
             data.put("token", token);
-            data.put("user_id", user.getId());
+            data.put("id", user.getId());
             data.put("nickname", user.getNickname());
             
             response.put("code", 200);
@@ -117,6 +193,9 @@ public class AuthController {
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            logger.severe("注册失败：" + e.getMessage());
+            e.printStackTrace();
+            
             response.put("code", 500);
             response.put("msg", "注册失败：" + e.getMessage());
             response.put("data", null);
@@ -133,6 +212,8 @@ public class AuthController {
         Map<String, Object> response = new HashMap<>();
         
         try {
+            logger.info("开始处理游客登录请求");
+            
             // 生成游客昵称
             String nickname = "游客" + System.currentTimeMillis() % 10000;
             
@@ -146,6 +227,7 @@ public class AuthController {
             
             // 保存用户
             userService.createUser(user);
+            logger.info("游客用户创建成功，ID: " + user.getId());
             
             // 生成JWT令牌
             String token = jwtUtil.generateToken(user);
@@ -153,15 +235,19 @@ public class AuthController {
             // 构建响应
             Map<String, Object> data = new HashMap<>();
             data.put("token", token);
-            data.put("user_id", user.getId());
+            data.put("id", user.getId());
             data.put("nickname", user.getNickname());
             
             response.put("code", 200);
             response.put("msg", "游客登录成功");
             response.put("data", data);
             
+            logger.info("游客登录成功，正在返回响应");
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            logger.severe("游客登录失败：" + e.getMessage());
+            e.printStackTrace();
+            
             response.put("code", 500);
             response.put("msg", "游客登录失败：" + e.getMessage());
             response.put("data", null);
@@ -187,6 +273,9 @@ public class AuthController {
             
             return ResponseEntity.ok(response);
         } catch (Exception e) {
+            logger.severe("检查昵称失败：" + e.getMessage());
+            e.printStackTrace();
+            
             response.put("code", 500);
             response.put("msg", "检查昵称失败：" + e.getMessage());
             response.put("data", null);
