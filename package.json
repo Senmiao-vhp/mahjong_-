@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "element-plus": "^2.9.6",
+    "vue-router": "^4.5.0"
+  }
+}

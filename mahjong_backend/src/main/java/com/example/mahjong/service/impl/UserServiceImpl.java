@@ -24,6 +24,7 @@ public class UserServiceImpl implements UserService {
     private JwtUtil jwtUtil;
 
     @Override
+    @Transactional
     public UserDTO createGuestUser() {
         // 创建游客用户
         User user = new User();
