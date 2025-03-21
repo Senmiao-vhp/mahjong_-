@@ -2,6 +2,20 @@
     "configurations": [
         {
             "type": "java",
+            "name": "MahjongApplication",
+            "request": "launch",
+            "mainClass": "com.example.mahjong.MahjongApplication",
+            "projectName": "hello"
+        },
+        {
+            "type": "java",
+            "name": "MahjongApplication",
+            "request": "launch",
+            "mainClass": "com.example.hello.MahjongApplication",
+            "projectName": "hello"
+        },
+        {
+            "type": "java",
             "name": "Spring Boot-HelloApplication<hello>",
             "request": "launch",
             "cwd": "${workspaceFolder}",

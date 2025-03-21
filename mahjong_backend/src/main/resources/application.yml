@@ -1,25 +1,78 @@
+# 服务器配置
 server:
-  port: 8080
+  port: 8080  # 服务器端口
   servlet:
-    context-path: /
-  address: 0.0.0.0
+    context-path: /  # 应用上下文路径
+  address: 0.0.0.0  # 监听所有网络接口
 
+# Spring框架配置
 spring:
+  # 数据源配置
   datasource:
-    driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/mahjong?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai
-    username: root
-    password: 200451
+    driver-class-name: com.mysql.cj.jdbc.Driver  # MySQL驱动类
+    url: jdbc:mysql://localhost:3306/mahjong?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true  # 数据库连接URL
+    username: root  # 数据库用户名
+    password: 200451  # 数据库密码
+  # JSON序列化配置
   jackson:
-    date-format: yyyy-MM-dd HH:mm:ss
-    time-zone: GMT+8
+    date-format: yyyy-MM-dd HH:mm:ss  # 日期格式
+    time-zone: "GMT+8"  # 时区设置，用引号括起来
+    serialization:
+      fail-on-empty-beans: false  # 空Bean不报错
+    deserialization:
+      fail-on-unknown-properties: false  # 未知属性不报错
+  # SQL初始化配置
+  sql:
+    init:
+      mode: never  # 不自动执行SQL脚本
+  # MVC配置
+  mvc:
+    pathmatch:
+      matching-strategy: ant_path_matcher  # 路径匹配策略
 
+# MyBatis配置
 mybatis:
-  mapper-locations: classpath:mapper/*.xml
-  type-aliases-package: com.example.hello.entity
+  mapper-locations: classpath:mapper/*.xml  # Mapper XML文件位置
+  type-aliases-package: com.example.mahjong.entity  # 实体类包路径
   configuration:
-    map-underscore-to-camel-case: true
+    map-underscore-to-camel-case: true  # 开启驼峰命名转换
+    default-fetch-size: 100  # 默认获取大小
+    default-statement-timeout: 30  # 默认SQL执行超时时间
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # SQL日志输出实现
+    # 调用参数名称
+    use-actual-param-name: true  # 使用实际参数名
+    # 启用自动生成键
+    use-generated-keys: true  # 使用自动生成的主键
+    # 启用延迟加载
+    lazy-loading-enabled: true  # 开启延迟加载
+    # 关闭积极的懒加载
+    aggressive-lazy-loading: false  # 关闭积极懒加载
 
+# 日志配置
+logging:
+  level:
+    root: INFO  # 根日志级别
+    com.example.mahjong: DEBUG  # 项目包日志级别
+    org.mybatis: DEBUG  # MyBatis日志级别
+    org.springdoc: INFO  # SpringDoc日志级别
+
+# JWT配置
 jwt:
-  secret: mahjong-game-secret-key-for-jwt-token-generation-and-validation
-  expiration: 86400000  # 24小时，单位毫秒 
+  secret: mahjong-game-secret-key-for-jwt-token-generation-and-validation  # JWT密钥
+  expiration: 86400000  # 24小时，单位毫秒，JWT过期时间
+
+# SpringDoc OpenAPI配置
+springdoc:
+  api-docs:
+    path: /v3/api-docs  # API文档路径
+  swagger-ui:
+    path: /swagger-ui.html  # Swagger UI路径
+    enabled: true  # 启用Swagger UI
+    operationsSorter: method  # 操作排序方式
+    tagsSorter: alpha  # 标签排序方式
+    disable-swagger-default-url: true  # 禁用默认URL
+    disable-auth-configuration: true  # 禁用认证配置
+  show-actuator: false  # 不显示Actuator端点
+  default-produces-media-type: application/json  # 默认响应媒体类型
+  default-consumes-media-type: application/json  # 默认请求媒体类型
+  packages-to-scan: com.example.mahjong.controller  # 要扫描的包

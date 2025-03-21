@@ -1,2 +1,5 @@
 node_modules
 mahjong_resources
+.VSCodeCounter
+.DS_Store
+node_modules
